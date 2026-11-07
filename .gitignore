@@ -1,5 +1,8 @@
 .env
+.venv/
 __pycache__/
 *.pyc
-.venv/
-runs/
+.pytest_cache/
+runs/*
+!runs/.gitkeep
+.DS_Store

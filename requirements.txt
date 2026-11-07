@@ -1,0 +1,16 @@
+gymnasium[box2d]>=1.0
+stable-baselines3>=2.3
+huggingface_sb3
+numpy
+scipy
+cma
+scikit-learn
+fastapi
+uvicorn[standard]
+httpx
+openai>=1.40
+pydantic>=2
+pymongo
+python-dotenv
+pillow
+pytest
