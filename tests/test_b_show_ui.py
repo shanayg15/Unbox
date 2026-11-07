@@ -29,18 +29,18 @@ def px(rule: str, prop: str = "font-size") -> int:
 
 
 def test_layout_skeleton():
-    for el_id in ["bbImg", "cloneImg", "clonePanel", "selPolicy", "selFlaw", "btnRun",
-                  "btnReveal", "btnFix", "chkShield", "btnReplayClip", "learnLine", "status",
+    for el_id in ["bbImg", "cloneImg", "clonePanel", "bbPill", "clonePill", "selPolicy", "selFlaw", "btnRun",
+                  "btnFix", "viewToggle", "fixSteps", "checks", "feed", "kMatch", "kDecisions",
                   "ledger", "subqLine", "subqBars", "code", "params", "curve", "results", "banner",
-                  "findingBody", "reportBody", "backupList", "secNav"]:
+                  "diag", "reportBody", "backupList", "secNav"]:
         assert f'id="{el_id}"' in HTML, el_id
-    for sec in ["sec-setup", "sec-learning", "sec-finding", "sec-fix", "sec-report"]:
+    for sec in ["sec-setup", "sec-analysis", "sec-fix", "sec-report"]:
         assert f'id="{sec}"' in HTML and f'href="#{sec}"' in HTML, sec
     assert "SB3 RL Zoo" in HTML and "Everything else built Nov 7." in HTML
-    assert "The robot (real network)" in HTML and "Our copy (readable code)" in HTML
-    assert "Brain: Muse Spark · Evidence scanner: SubQ Snap 1.1" in HTML
-    assert "Fix our copy" in HTML and "Guard the real network" in HTML
-    assert "What your robotics team gets" in HTML
+    assert "Deployed policy" in HTML and "Recovered policy" in HTML
+    assert "Uncover the network's hidden logic" in HTML
+    assert "Apply fix" in HTML and "Diagnostic report" in HTML
+    assert "robotics team gets" not in HTML
 
 
 def test_grid_and_projector_sizes():
@@ -60,20 +60,19 @@ def test_every_event_type_is_handled():
 
 
 def test_subq_and_ledger_pieces():
-    assert "raw rows" in JS and "most likely cause" in JS and "anomaly_feature" in JS
-    assert "Confirmed" in JS and "Testing" in JS and "Ruled out" in JS
+    assert "raw rows" in JS and "anomaly_feature" in JS
+    assert "Confirmed" in JS and "Under test" in JS and "Rejected" in JS
     assert "line-through" in css_rule("details.ruled .lrow .text")
-    assert "The robot (real network) + guard" in JS
-    assert "highlight_rule_ids" in JS
+    assert "Deployed policy · fix applied" in JS and "No remediation is needed" in JS
     for emoji in ["✓", "✗", "◎", "🔍", "⚠"]:
         assert emoji not in JS and emoji not in HTML
 
 
 def test_clip_player_contract():
-    # one timer drives both images, clips play once, new clips wait for the current one to end
+    # one timer drives both images; clips loop in sync and hold the last frame with a label
     assert JS.count("setInterval(") == 1
-    assert "pendingClip" in JS and "data:image/jpeg;base64," in JS
-    assert 'classList.toggle("disagree"' in JS and "stopPlayer" in JS
+    assert "HOLD_MS" in JS and "data:image/jpeg;base64," in JS
+    assert 'classList.toggle("disagree"' in JS and "endLabel" in JS
 
 
 def test_fallback_banner_is_never_silent():

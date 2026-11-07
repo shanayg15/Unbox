@@ -489,7 +489,7 @@ def _guard_check(bridge, spec, queries, failing: dict | None, prog: dict, fix: d
     pct = same / total
     where = "Outside the flaw zone, the" if reg is not None else "The"
     return {"pct": pct, "n": total,
-            "text": f"{where} guarded robot acts exactly like the original on {pct:.1%} of held-out situations"}
+            "text": f"{where} guarded policy selects the same action as the original network on {pct:.1%} of held-out situations"}
 
 
 def _cost(bridge, prog: dict, fix: dict) -> dict | None:
@@ -642,8 +642,8 @@ def build_report(bridge) -> dict:
                     name = _action_name(spec, best_a)
                     action = {"region_text": region["text"] if region else "", "correct_action": name,
                               "correct_action_id": best_a, "n_training": len(rows),
-                              "text": f"Retrain on situations where {region['text'] if region else failing['feature']}. "
-                                      f"Correct action there: {name} (from the fixed copy)."}
+                              "text": f"Retrain on states where {region['text'] if region else failing['feature']}. "
+                                      f"Target action in this region: {name}, taken from the corrected policy."}
             except Exception as e:  # noqa: BLE001
                 errors.append(f"training set: {type(e).__name__}: {e}"[:200])
         try:

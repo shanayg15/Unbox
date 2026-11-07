@@ -583,6 +583,11 @@ class RunReq(BaseModel):
 def api_run(req: RunReq) -> dict:
     cfg = req.model_dump()
     cfg["demo_seed"] = req.demo_seed if req.demo_seed is not None else demo_seed_for(req.bb)
+    with RUNS_LOCK:                          # the planted flaw is one global setting per robot
+        busy = [b for b in RUNS.values() if b.kind == "live" and b.config.get("bb") == req.bb
+                and not b.finished and time.time() - b.t0 < live_timeout_s() + 60]
+    if busy:
+        raise HTTPException(409, "A run on this robot is still in progress. Wait for it to finish.")
     if not (use_mocks() or req.bb == "mock"):
         try:
             admin_post("/admin/config", {"bb": req.bb, "twist_id": req.twist_id})

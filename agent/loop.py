@@ -187,7 +187,7 @@ def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
     rows = [(b.query_id, o, a, b.source) for b in batches for o, a in zip(b.obs, b.actions)]
     rng = random.Random(0)
     seed_obs = X if len(X) <= 2000 else rng.sample(X, 2000)
-    E("query_count", n=bb.query_count())
+    E("query_count", n=bb.query_count(), observed=len(X) + len(HX))
 
     # the robot's own demo-seed clip goes up first, before any copy exists
     try:

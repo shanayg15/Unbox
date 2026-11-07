@@ -7,132 +7,152 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <!-- ============ LEFT: the two robots, sticky ============ -->
+  <!-- ============ LEFT: the two simulations, always visible ============ -->
   <section class="left">
     <div class="sim" id="bbPanel">
       <header class="panel-head">
-        <span class="title" id="bbTitle">The robot (real network)</span>
-        <span class="meta" id="bbMeta"></span>
+        <div>
+          <div class="title" id="bbTitle">Deployed policy</div>
+          <div class="sub">Neural network under test</div>
+        </div>
+        <span class="pill" id="bbPill">Idle</span>
       </header>
       <div class="screen">
-        <img id="bbImg" alt="the robot's run">
-        <div class="empty" id="bbEmpty">Press Run to watch the robot</div>
+        <img id="bbImg" alt="deployed policy simulation">
+        <div class="empty" id="bbEmpty">Press Run analysis to start the simulation</div>
         <div class="end-label" id="bbEnd" hidden></div>
       </div>
     </div>
     <div class="sim" id="clonePanel">
       <header class="panel-head">
-        <span class="title" id="cloneTitle">Our copy (readable code)</span>
-        <span class="meta" id="cloneMeta"></span>
+        <div>
+          <div class="title" id="cloneTitle">Recovered policy</div>
+          <div class="sub">Readable Python written by Unbox</div>
+        </div>
+        <span class="pill" id="clonePill">Waiting</span>
       </header>
       <div class="screen">
-        <img id="cloneImg" alt="our copy's run">
-        <div class="empty" id="cloneEmpty">Waiting for the first copy…</div>
+        <img id="cloneImg" alt="recovered policy simulation">
+        <div class="empty" id="cloneEmpty">Waiting for the first recovered version…</div>
         <div class="end-label" id="cloneEnd" hidden></div>
       </div>
     </div>
     <div class="clip-bar">
-      <button id="btnReplayClip" class="small" disabled>Replay clip</button>
-      <span class="note" id="clipNote">Same starting state for both. Red outline: the robot would act differently at this moment.</span>
-      <span class="note mono" id="frameNote"></span>
+      <span>Same start state, played in sync. A red outline marks moments where the network would act differently.</span>
+      <span class="mono" id="frameNote"></span>
     </div>
   </section>
 
-  <!-- ============ RIGHT: numbered sections, scrollable ============ -->
+  <!-- ============ RIGHT: the workflow ============ -->
   <section class="right" id="right">
     <header class="topbar">
-      <div class="brand">Unbox <span class="tag">readable copies of robot networks</span></div>
+      <div class="brand">Unbox <span class="tag">Uncover the network's hidden logic</span></div>
       <nav class="tabs">
-        <button class="tab active" id="tabLive">Live</button>
+        <button class="tab active" id="tabLive">Analysis</button>
         <button class="tab" id="tabResults">Results</button>
       </nav>
       <nav class="secnav view-live" id="secNav">
-        <a href="#sec-setup">1 Setup</a><a href="#sec-learning">2 Learning</a><a href="#sec-finding">3 Finding</a><a href="#sec-fix">4 Fix</a><a href="#sec-report">5 Report</a>
+        <a href="#sec-setup">1 Configure</a><a href="#sec-analysis">2 Analysis</a><a href="#sec-fix">3 Remediation</a><a href="#sec-report">4 Report</a>
       </nav>
     </header>
 
     <div class="scroll" id="scroll">
       <div class="view-live">
-        <!-- 1 Setup -->
-        <section class="sec" id="sec-setup">
-          <h2><span class="num">1</span>Setup</h2>
-          <div class="grid2">
-            <label class="field">Robot
-              <select id="selPolicy"></select>
-              <span class="hint" id="policyDesc"></span>
-            </label>
-            <label class="field">Flaw
-              <select id="selFlaw"></select>
-              <span class="hint">A planted flaw stays secret from Unbox and from you until Reveal.</span>
-            </label>
+        <!-- 1 Configure -->
+        <section class="step" id="sec-setup">
+          <header class="step-head">
+            <span class="num">1</span>
+            <div class="step-title"><h2>Configure</h2><p>Choose the robot policy and the scenario to analyse.</p></div>
+            <span class="pill" id="pillSetup">Ready</span>
+          </header>
+          <div class="step-body">
+            <div class="grid2">
+              <label class="field"><span class="flabel">Robot policy</span>
+                <select id="selPolicy"></select>
+                <span class="hint" id="policyDesc"></span>
+              </label>
+              <label class="field"><span class="flabel">Scenario</span>
+                <select id="selFlaw"></select>
+                <span class="hint">Planted flaws are hidden from Unbox.</span>
+              </label>
+            </div>
+            <div class="engines">Muse Spark writes the code · SubQ Snap 1.1 scans the evidence · Python verifies every rule</div>
+            <div class="runrow">
+              <button id="btnRun" class="primary">Run analysis</button>
+              <details class="backup" id="backup">
+                <summary>Earlier runs</summary>
+                <div class="backup-list" id="backupList"></div>
+              </details>
+              <span class="run-badge" id="runBadge"></span>
+            </div>
+            <div class="banner" id="banner" hidden></div>
           </div>
-          <div class="brainline">Brain: Muse Spark · Evidence scanner: SubQ Snap 1.1</div>
-          <div class="runrow">
-            <button id="btnRun" class="primary">Run</button>
-            <details class="backup" id="backup">
-              <summary>Backup</summary>
-              <div class="backup-list" id="backupList"></div>
-            </details>
-            <span class="run-badge" id="runBadge"></span>
-          </div>
-          <div class="banner" id="banner" hidden></div>
-          <div class="status" id="status">Pick a robot and a flaw, then press Run.</div>
         </section>
 
-        <!-- 2 Learning -->
-        <section class="sec" id="sec-learning">
-          <h2><span class="num">2</span>Learning</h2>
-          <div class="bigline" id="learnLine">Queries asked: 0 · no copy yet</div>
-          <svg id="curve" viewBox="0 0 900 230" preserveAspectRatio="xMidYMid meet" aria-label="best match so far vs queries asked"></svg>
-          <div class="subq">
-            <div class="subq-line" id="subqLine">SubQ has not read the evidence yet.</div>
+        <!-- 2 Analysis -->
+        <section class="step" id="sec-analysis">
+          <header class="step-head">
+            <span class="num">2</span>
+            <div class="step-title"><h2>Analysis</h2><p>Unbox observes the network, writes a readable copy and proves each rule with experiments.</p></div>
+            <span class="pill" id="pillAnalysis">Waiting</span>
+          </header>
+          <div class="step-body">
+            <div class="kpis">
+              <div class="kpi"><div class="kv" id="kMatch">—</div><div class="kl">Match on unseen situations</div></div>
+              <div class="kpi"><div class="kv" id="kDecisions">0</div><div class="kl">Network decisions analysed</div></div>
+              <div class="kpi"><div class="kv" id="kVersion">—</div><div class="kl">Recovered version</div></div>
+              <div class="kpi"><div class="kv" id="kTime">—</div><div class="kl">Elapsed</div></div>
+            </div>
+            <div class="sub-h">Activity</div>
+            <ol class="feed" id="feed"><li class="muted">No activity yet.</li></ol>
+
+            <div class="sub-h">Agreement with the network</div>
+            <svg id="curve" viewBox="0 0 900 220" preserveAspectRatio="xMidYMid meet" aria-label="best match so far"></svg>
+
+            <div class="sub-h">Evidence scan · SubQ Snap</div>
+            <div class="subq-line" id="subqLine">Waiting for the first scan.</div>
             <div class="subq-bars" id="subqBars"></div>
-          </div>
-        </section>
 
-        <!-- 3 Finding -->
-        <section class="sec" id="sec-finding">
-          <h2><span class="num">3</span>Finding</h2>
-          <div class="card finding" id="findingCard">
-            <div class="finding-body" id="findingBody"><span class="muted">The conclusion appears here once Unbox has confirmed rules.</span></div>
-            <div class="finding-actions"><button id="btnReveal" disabled>Reveal the planted flaw</button></div>
-          </div>
-
-          <div class="card code-card">
-            <header class="card-head"><span id="codeTitle">Our copy</span></header>
+            <div class="sub-h" id="codeTitle">Recovered policy</div>
             <pre class="code" id="code"><span class="muted">The recovered program appears here.</span></pre>
             <div class="params mono" id="params"></div>
-          </div>
 
-          <div class="card ledger-card">
-            <header class="card-head"><span>Ledger</span><span class="meta">rules Unbox believes the robot follows; the status comes from probe experiments</span></header>
+            <div class="sub-h">Rule ledger <span class="meta">status set by probe experiments, not by the language model</span></div>
             <div id="ledger"><div class="muted">No rules yet.</div></div>
           </div>
         </section>
 
-        <!-- 4 Fix -->
-        <section class="sec" id="sec-fix">
-          <h2><span class="num">4</span>Fix</h2>
-          <div class="runrow">
-            <button id="btnFix" disabled>Fix our copy</button>
-            <label class="toggle" id="guardToggle">
-              <input type="checkbox" id="chkShield" disabled><span class="knob"></span>Guard the real network
-            </label>
+        <!-- 3 Remediation -->
+        <section class="step" id="sec-fix">
+          <header class="step-head">
+            <span class="num">3</span>
+            <div class="step-title"><h2>Remediation</h2><p>Unbox corrects the failing rule and applies the fix to the deployed policy as a runtime guard.</p></div>
+            <span class="pill" id="pillFix">Waiting</span>
+          </header>
+          <div class="step-body">
+            <div id="diag"><div class="muted">Available when the analysis completes.</div></div>
+            <div class="runrow" id="fixRow" hidden>
+              <button id="btnFix" class="primary">Apply fix</button>
+              <div class="seg" id="viewToggle" hidden>
+                <button id="viewOrig">Original</button><button id="viewFixed" class="on">With fix</button>
+              </div>
+            </div>
+            <ol class="fixsteps" id="fixSteps" hidden></ol>
+            <div class="fix-explain" id="fixExplain" hidden></div>
+            <pre class="code diff" id="diff" hidden></pre>
+            <div class="checks" id="checks" hidden></div>
+            <div class="hint">The network's weights are not modified.</div>
           </div>
-          <div class="hint">The network's weights are never changed; retraining is outside this project.</div>
-          <div class="fix-explain" id="fixExplain" hidden></div>
-          <pre class="code diff" id="diff" hidden></pre>
-          <div class="checkline" id="guardCheck" hidden></div>
-          <div class="checkline" id="guardCost" hidden></div>
         </section>
 
-        <!-- 5 Report -->
-        <section class="sec" id="sec-report">
-          <h2><span class="num">5</span>Report</h2>
-          <div class="card report" id="report">
-            <header class="report-head">What your robotics team gets</header>
-            <div id="reportBody"><div class="muted">Appears when a run finishes.</div></div>
-          </div>
+        <!-- 4 Report -->
+        <section class="step" id="sec-report">
+          <header class="step-head">
+            <span class="num">4</span>
+            <div class="step-title"><h2>Diagnostic report</h2><p>Findings, evidence and recommended actions for the engineering team.</p></div>
+            <span class="pill" id="pillReport">Waiting</span>
+          </header>
+          <div class="step-body" id="reportBody"><div class="muted">Generated when the analysis completes.</div></div>
         </section>
       </div>
 
@@ -140,7 +160,7 @@
       <div class="results" id="results" hidden></div>
 
       <footer class="credit">
-        Robots under study: SB3 RL Zoo checkpoints from Hugging Face (third-party) on Gymnasium environments. Everything else built Nov 7.
+        Policies under study: SB3 RL Zoo checkpoints from Hugging Face (third-party) on Gymnasium environments. Everything else built Nov 7.
       </footer>
     </div>
   </section>
