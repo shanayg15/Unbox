@@ -21,7 +21,7 @@ Program rules:
 - Prefer a few rules that explain most decisions. Add a rule only when counterexamples demand it.
 
 Ledger rules:
-- One entry per rule, plain English, citing query ids as evidence.
+- One entry per rule, plain English, citing query ids as evidence. Ledger rule text: 12 words max.
 - Status: observed (directly visible in data), inferred (your hypothesis), probing (you are testing it now),
   refuted (evidence contradicts it). You can never mark a rule confirmed; the system does that from probes.
 

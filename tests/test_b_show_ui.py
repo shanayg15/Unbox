@@ -29,21 +29,27 @@ def px(rule: str, prop: str = "font-size") -> int:
 
 
 def test_layout_skeleton():
-    for el_id in ["bbImg", "cloneImg", "clonePanel", "selPolicy", "selFlaw", "selBrain", "btnRun",
-                  "btnReveal", "btnFix", "chkShield", "statQueries", "statMatch", "status",
-                  "ledgerRows", "subq", "subqLine", "subqBars", "code", "curve", "results", "banner"]:
+    for el_id in ["bbImg", "cloneImg", "clonePanel", "selPolicy", "selFlaw", "btnRun",
+                  "btnReveal", "btnFix", "chkShield", "btnReplayClip", "learnLine", "status",
+                  "ledger", "subqLine", "subqBars", "code", "params", "curve", "results", "banner",
+                  "findingBody", "reportBody", "backupList", "secNav"]:
         assert f'id="{el_id}"' in HTML, el_id
-    assert "Policies under study: SB3 RL Zoo (third-party). Everything else built Nov 7." in HTML
-    assert 'class="left"' in HTML and 'class="right"' in HTML and "bottom" in HTML
+    for sec in ["sec-setup", "sec-learning", "sec-finding", "sec-fix", "sec-report"]:
+        assert f'id="{sec}"' in HTML and f'href="#{sec}"' in HTML, sec
+    assert "SB3 RL Zoo" in HTML and "Everything else built Nov 7." in HTML
+    assert "The robot (real network)" in HTML and "Our copy (readable code)" in HTML
+    assert "Brain: Muse Spark · Evidence scanner: SubQ Snap 1.1" in HTML
+    assert "Fix our copy" in HTML and "Guard the real network" in HTML
+    assert "What your robotics team gets" in HTML
 
 
 def test_grid_and_projector_sizes():
     body = css_rule("body")
     assert "grid-template-columns" in body and "100vh" in body and "overflow: hidden" in body
-    assert "3fr" in css_rule(".right .bottom") and "2fr" in css_rule(".right .bottom")
-    assert "object-fit: contain" in css_rule(".sim img")
+    assert "object-fit: contain" in css_rule(".screen img")
     assert px(css_rule(".lrow")) >= 18
     assert px(css_rule(".code"), "font") >= 16
+    assert "pre" in css_rule(".code .src")          # no wrapped code lines
 
 
 def test_every_event_type_is_handled():
@@ -53,33 +59,28 @@ def test_every_event_type_is_handled():
         assert f'case "{etype}":' in JS, etype
 
 
-def test_subq_panel_pieces():
-    assert "SubQ Snap" in JS and "raw rows" in JS and "probe next" in JS
-    assert "SubQ p=" in JS                        # chip on each ledger row
-    assert "feature_relevance" in JS and "rule_support" in JS
-    assert ".chip" in CSS and "dashed" in css_rule(".chip-demo, .chip")   # distinct from verdict icons
-
-
-def test_ledger_icons_and_reveal_labels():
-    for icon in ["✓", "✗", "?", "◎", "🔍"]:
-        assert icon in JS
-    assert "line-through" in css_rule(".lrow.refuted .text")
-    assert "BLACK BOX + SHIELD (fixed rule)" in JS
+def test_subq_and_ledger_pieces():
+    assert "raw rows" in JS and "most likely cause" in JS and "anomaly_feature" in JS
+    assert "Confirmed" in JS and "Testing" in JS and "Ruled out" in JS
+    assert "line-through" in css_rule("details.ruled .lrow .text")
+    assert "The robot (real network) + guard" in JS
     assert "highlight_rule_ids" in JS
+    for emoji in ["✓", "✗", "◎", "🔍", "⚠"]:
+        assert emoji not in JS and emoji not in HTML
 
 
 def test_clip_player_contract():
-    # one timer drives both images; new clips wait for the loop start
+    # one timer drives both images, clips play once, new clips wait for the current one to end
     assert JS.count("setInterval(") == 1
     assert "pendingClip" in JS and "data:image/jpeg;base64," in JS
-    assert 'classList.toggle("disagree"' in JS
+    assert 'classList.toggle("disagree"' in JS and "stopPlayer" in JS
 
 
 def test_fallback_banner_is_never_silent():
     import app.server as server
 
     assert server.FALLBACK_TIMEOUT_TEXT == (
-        "Live run exceeded time limit, replaying cached run of this exact configuration.")
+        "Live run went past the time limit. Showing our earlier run of this exact configuration.")
     assert "d.banner" in JS and "showBanner" in JS
 
 

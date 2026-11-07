@@ -6,3 +6,5 @@ __pycache__/
 runs/*
 !runs/.gitkeep
 .DS_Store
+.playwright-mcp/
+.claude/

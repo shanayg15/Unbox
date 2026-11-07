@@ -82,41 +82,62 @@ def _same(a, b) -> bool:
         return a == b
 
 
+def _end_info(terminated: bool, truncated: bool, rewards: list[float], steps: int) -> dict:
+    return {"terminated": bool(terminated), "truncated": bool(truncated), "steps": int(steps),
+            "last_reward": float(rewards[-1]) if rewards else None,
+            "total_reward": float(sum(rewards)) if rewards else 0.0}
+
+
 def render_pair(bb, env_factory, fn, params, demo_seed: int, frame_every: int = FRAME_EVERY,
-                max_steps: int = 1000) -> dict:
+                max_steps: int = 1000, bb_only: bool = False) -> dict:
     """Black-box clip (cached by the black box) + clone clip from a local env with the same seed.
-    disagree[t] = fn(bb_obs[t]) != bb_action[t] on the black box's own trajectory, one flag per frame."""
+
+    disagree[i] belongs to clone frame i: at the exact state shown in that frame, the robot (asked with one
+    batched /act call) would choose a different action than the copy did. Same length as `clone`, so the
+    UI sets the red border from the same index, in the same tick, as the clone image."""
     from contracts.mocks import encode_frame
 
     ep = bb.episode(demo_seed, render=True, frame_every=frame_every)
-    bb_frames = ep.frames or []
-    disagree = []
-    for t in range(0, len(ep.obs), frame_every):
-        try:
-            disagree.append(not _same(fn(ep.obs[t], params), ep.actions[t]))
-        except Exception:  # noqa: BLE001
-            disagree.append(True)
-    disagree = disagree[:len(bb_frames)]
-    clone_frames = []
+    out = {"seed": demo_seed, "fps": round(50 / frame_every), "bb": ep.frames or [],
+           "bb_end": _end_info(ep.terminated, ep.truncated, ep.rewards, len(ep.actions)),
+           "clone": [], "disagree": [], "clone_end": None}
+    if bb_only:
+        return out
+    clone_frames, clone_obs, clone_acts, rewards = [], [], [], []
+    term = trunc = False
+    steps = 0
     try:
         env, obs = env_factory(demo_seed)
         try:
             for step in range(max_steps):
+                o = list(map(float, obs))
+                a = fn(o, params)
                 if step % frame_every == 0:
                     rgb = env.render()
                     if rgb is None:
                         break
                     clone_frames.append(encode_frame(rgb))
-                a = fn(list(map(float, obs)), params)
-                obs, _, term, trunc, _ = env.step(int(a) if not isinstance(a, list) else a)
+                    clone_obs.append(o)
+                    clone_acts.append(a)
+                obs, r, term, trunc, _ = env.step(int(a) if not isinstance(a, list) else a)
+                rewards.append(float(r))
+                steps = step + 1
                 if term or trunc:
                     break
         finally:
             env.close()
     except Exception as e:  # noqa: BLE001 - a missing clone clip never stops the run
         print(f"[loop] clone clip failed: {type(e).__name__}: {e}")
-    return {"seed": demo_seed, "fps": round(50 / frame_every), "bb": bb_frames, "clone": clone_frames,
-            "disagree": disagree}
+    disagree = [False] * len(clone_frames)
+    if clone_obs:
+        try:
+            qb = bb.act(clone_obs, source="probe")
+            disagree = [not _same(ca, ba) for ca, ba in zip(clone_acts, qb.actions)]
+        except Exception as e:  # noqa: BLE001
+            print(f"[loop] disagree check failed: {type(e).__name__}: {e}")
+    out.update(clone=clone_frames, disagree=disagree[:len(clone_frames)],
+               clone_end=_end_info(term, trunc, rewards, steps))
+    return out
 
 
 def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
@@ -167,6 +188,12 @@ def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
     rng = random.Random(0)
     seed_obs = X if len(X) <= 2000 else rng.sample(X, 2000)
     E("query_count", n=bb.query_count())
+
+    # the robot's own demo-seed clip goes up first, before any copy exists
+    try:
+        E("frames", version=0, **render_pair(bb, env_factory, None, None, demo_seed, bb_only=True))
+    except Exception as e:  # noqa: BLE001
+        E("status", text=f"robot clip skipped ({type(e).__name__})")
 
     # 2. hints -------------------------------------------------------------------
     hints = numerics.pattern_hints(X, y, spec)
@@ -332,6 +359,9 @@ def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
             break
 
     # 4. final evaluation --------------------------------------------------------
+    if best is None and live and over_time():
+        # nothing recovered inside the live time limit: let the app switch to the cached run
+        raise TimeoutError("live time limit reached before a program was recovered")
     if best is None:
         fn_final = numerics.load_program(FALLBACK_CODE, spec)
         best = (0.0, 0, FALLBACK_CODE, {}, fn_final)

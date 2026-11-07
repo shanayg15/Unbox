@@ -364,12 +364,13 @@ def test_snap_off_run_is_not_cached(env):
     assert not (paths.cache / "bb-01__t-cp-1__muse").exists()
 
 
-def test_queries_are_left_out_of_the_cache_because_they_are_large_and_unused(env, monkeypatch):
+def test_queries_are_cached_for_the_report_card(env, monkeypatch):
+    """app/report.py reads the query log (rollouts, holdout, probes); runs/ is gitignored, cache/ is not."""
     world, paths, options = env
     import agent.snap as snap_mod
     monkeypatch.setattr(snap_mod, "scan", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("offline")))
     batch.run_config(config(snap=True), world, paths, options)
-    assert not (paths.cache / "bb-01__t-cp-1__muse" / "queries.jsonl").exists()
+    assert (paths.cache / "bb-01__t-cp-1__muse" / "queries.jsonl").exists()
 
 
 def test_a_finished_config_is_skipped_on_rerun(env):
@@ -428,6 +429,7 @@ def test_results_folder_holds_only_what_the_results_tab_should_show(env):
 def test_demo_seed_follows_the_same_settings_as_the_app(env, monkeypatch):
     monkeypatch.setenv("DEMO_SEED", "7")
     monkeypatch.setenv("DEMO_SEED_BB_05", "42")
+    monkeypatch.delenv("DEMO_SEED_BB_01", raising=False)
     assert batch.demo_seed_for("bb-05") == 42 and batch.demo_seed_for("bb-01") == 7
 
 

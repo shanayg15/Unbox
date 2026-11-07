@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parent.parent
 # Demo policy first, then its CartPole integration target, then their cross-match partners. The cut rule
 # drops MountainCar and Acrobot first, so they go last.
 POLICY_ORDER = ["bb-05", "bb-01", "bb-06", "bb-02", "bb-03", "bb-04"]
-CACHED_FILES = ["events.jsonl", "brain_calls.jsonl", "programs.jsonl", "ledger.jsonl", "eval.json"]
+CACHED_FILES = ["events.jsonl", "brain_calls.jsonl", "programs.jsonl", "ledger.jsonl", "eval.json", "queries.jsonl"]
 NEAR = 0.2                  # twist_found: a threshold within 20% of the true one
 TASKS = {
     "CartPole-v1": "CartPole: keep a pole balanced upright on a cart by pushing the cart left or right, "

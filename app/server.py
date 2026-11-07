@@ -56,8 +56,9 @@ CACHE_DIR = ROOT / "cache"
 RESULTS_DIR = ROOT / "results"
 DEFAULT_FIXTURE = "demo_events"
 
-FALLBACK_TIMEOUT_TEXT = ("Live run exceeded time limit, replaying cached run of this exact "
+FALLBACK_TIMEOUT_TEXT = ("Live run went past the time limit. Showing our earlier run of this exact "
                          "configuration.")
+FALLBACK_REPLAY_MAX_S = 30.0       # a cached fallback replays in at most this many seconds
 
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]{0,127}$")
 
@@ -84,7 +85,19 @@ def fallback_speed() -> float:
 
 def live_grace_s() -> float:
     """Extra seconds past LIVE_TIMEOUT_S before the app gives up on the agent thread."""
-    return float(os.getenv("LIVE_GRACE_S", "10"))
+    return float(os.getenv("LIVE_GRACE_S", "3"))
+
+
+def best_program(bridge: "Bridge") -> dict | None:
+    """The program the UI shows everywhere: highest held-out match so far (latest on a tie)."""
+    best = None
+    with bridge.lock:
+        for ev in bridge.buffer:
+            if ev["type"] == "program":
+                d = ev["data"]
+                if best is None or (d.get("agreement") or 0) >= (best.get("agreement") or 0):
+                    best = d
+    return best
 
 
 def blackbox_url() -> str:
@@ -405,7 +418,7 @@ def _fallback(bridge: Bridge, reason: str, cfg: dict) -> None:
     try:
         events = load_jsonl(cache_path(key))
         banner = FALLBACK_TIMEOUT_TEXT if reason == "timeout" else (
-            f"{reason} Replaying cached run of this exact configuration ({key}).")
+            f"{reason} Showing our earlier run of this exact configuration.")
         source = f"cache/{key}"
     except FileNotFoundError:
         events = load_jsonl(ensure_fixture())
@@ -418,7 +431,11 @@ def _fallback(bridge: Bridge, reason: str, cfg: dict) -> None:
     bridge.ctx["fallback_source"] = source
     play, held = _replay_source_reveal_only(events)
     bridge.source.update(held)
-    replay_into(bridge, play, speed=fallback_speed(), t_offset=bridge.now())
+    span = (float(play[-1].get("t", 0)) - float(play[0].get("t", 0))) if play else 0.0
+    speed = fallback_speed()
+    if speed > 0:                                  # 0 = instant (tests); else cap the replay length
+        speed = max(speed, span / FALLBACK_REPLAY_MAX_S)
+    replay_into(bridge, play, speed=speed, t_offset=bridge.now())
 
 
 def _run_thread(bridge: Bridge, cfg: dict) -> None:
@@ -472,7 +489,9 @@ def _run_thread(bridge: Bridge, cfg: dict) -> None:
         return
     if "e" in failure:
         e = failure["e"]
-        if isinstance(e, NotImplementedError):
+        if isinstance(e, TimeoutError):
+            _fallback(bridge, "timeout", cfg)
+        elif isinstance(e, NotImplementedError):
             _error(bridge, "agent.loop.run is not built yet (NotImplementedError).")
             _fallback(bridge, "Agent loop not built yet.", cfg)
         else:
@@ -581,6 +600,7 @@ class ReplayReq(BaseModel):
     fixture: str | None = None
     speed: float = 1.0
     hold_reveal: bool = True       # keep reveal/fix/shield for the buttons, like a live run
+    max_seconds: float | None = None   # speed up so the replay takes at most this long
 
 
 @app.post("/api/replay")
@@ -600,11 +620,31 @@ def api_replay(req: ReplayReq) -> dict:
     if not events:
         raise HTTPException(404, f"{label} is empty")
 
-    bridge = new_bridge("replay", {"source": label, "speed": req.speed})
+    speed = req.speed
+    if req.max_seconds and speed > 0 and len(events) > 1:
+        span = float(events[-1].get("t", 0)) - float(events[0].get("t", 0))
+        speed = max(speed, span / req.max_seconds)
+    cfg: dict[str, Any] = {"source": label, "speed": speed}
+    m = re.match(r"^(bb-\d+)__(.+?)__(\w+)$", req.cache_key or "")
+    if m:                                  # a cached run of a real config: Reveal/Fix/Guard work live
+        cfg.update(bb=m.group(1), twist_id=None if m.group(2) == "none" else m.group(2), brain=m.group(3))
+    bridge = new_bridge("replay", cfg)
     bridge.ctx["fallback_source"] = label
+    if m and not use_mocks():
+        try:
+            admin_post("/admin/config", {"bb": cfg["bb"], "twist_id": cfg["twist_id"]})
+            seed = next((int(e["data"]["seed"]) for e in events
+                         if e.get("type") == "frames" and e.get("data", {}).get("seed") is not None),
+                        demo_seed_for(cfg["bb"]))
+            info = policy_info(cfg["bb"])
+            bridge.ctx.update({"bb": make_blackbox(cfg["bb"]), "numerics": make_numerics(),
+                               "env_id": info.get("env_id"), "demo_seed": seed,
+                               "policy_label": info.get("label")})
+        except Exception as e:  # noqa: BLE001 - the replay still plays; reveal may fail later
+            print(f"[replay] could not set up live buttons for {label}: {type(e).__name__}: {e}")
     play, held = _replay_source_reveal_only(events) if req.hold_reveal else (events, {})
     bridge.source.update(held)
-    threading.Thread(target=replay_into, args=(bridge, play, req.speed), daemon=True,
+    threading.Thread(target=replay_into, args=(bridge, play, speed), daemon=True,
                      name=f"replay-{bridge.run_id}").start()
     return {"run_id": bridge.run_id, "source": label, "events": len(events),
             "held": sorted(held)}
@@ -648,7 +688,7 @@ def api_fix(req: RunRef) -> dict:
     bridge = get_bridge(req.run_id)
     if bridge.ctx.get("fix") is not None:         # idempotent: one fix per run
         return {"ok": True, "diff": bridge.ctx["fix"].get("diff", "")}
-    program = bridge.last("program")
+    program = best_program(bridge)
     reveal = bridge.ctx.get("reveal") or bridge.last("reveal")
     if program is None:
         raise HTTPException(409, "no program recovered yet")
@@ -694,7 +734,7 @@ class ShieldReq(BaseModel):
     on: bool
 
 
-def shield_clip(bridge: Bridge, *, max_frames: int = 160, frame_every: int = 3) -> list[str]:
+def shield_clip(bridge: Bridge, *, max_steps: int = 1000, frame_every: int = 3) -> list[str]:
     """Run the demo seed locally; each step: bb action from /act, then shielded_action."""
     import base64
     import io
@@ -703,7 +743,7 @@ def shield_clip(bridge: Bridge, *, max_frames: int = 160, frame_every: int = 3) 
 
     ctx = bridge.ctx
     bb, numerics = ctx.get("bb"), ctx.get("numerics")
-    fix, program = ctx.get("fix") or bridge.last("fix"), bridge.last("program")
+    fix, program = ctx.get("fix") or bridge.last("fix"), best_program(bridge)
     if bb is None or numerics is None or fix is None or program is None:
         raise RuntimeError("shield needs a live run with a recovered program and a fix")
     spec = bb.spec()
@@ -711,8 +751,10 @@ def shield_clip(bridge: Bridge, *, max_frames: int = 160, frame_every: int = 3) 
     fixed = numerics.load_program(fix["code"], spec)
     env, obs = make_env_factory(ctx.get("env_id") or "CartPole-v1", render=True)(ctx["demo_seed"])
     frames: list[str] = []
+    rewards: list[float] = []
+    term = trunc = False
     try:
-        for step in range(max_frames * frame_every):
+        for step in range(max_steps):
             if step % frame_every == 0:
                 im = Image.fromarray(env.render())
                 im = im.resize((360, round(360 * im.height / im.width)))
@@ -721,12 +763,16 @@ def shield_clip(bridge: Bridge, *, max_frames: int = 160, frame_every: int = 3) 
                 frames.append(base64.b64encode(buf.getvalue()).decode())
             bb_action = bb.act([obs], source="probe").actions[0]
             a = numerics.shielded_action(rec, program["params"], fixed, fix["params"], obs, bb_action)
-            o, _r, term, trunc, _ = env.step(a)
+            o, r, term, trunc, _ = env.step(a)
+            rewards.append(float(r))
             obs = [float(v) for v in o]
             if term or trunc:
                 break
     finally:
         env.close()
+    bridge.ctx["shield_end"] = {"terminated": bool(term), "truncated": bool(trunc), "steps": len(rewards),
+                                "last_reward": rewards[-1] if rewards else None,
+                                "total_reward": float(sum(rewards))}
     return frames
 
 
@@ -741,7 +787,7 @@ def api_shield(req: ShieldReq) -> dict:
         if held is not None and (bridge.kind == "replay" or bridge.superseded):
             data = {"on": True, "bb": held.get("bb")}
         elif cached:
-            data = {"on": True, "bb": cached}
+            data = {"on": True, "bb": cached, "bb_end": bridge.ctx.get("shield_end")}
         else:
             try:
                 frames = shield_clip(bridge)
@@ -756,7 +802,7 @@ def api_shield(req: ShieldReq) -> dict:
                     raise HTTPException(409, f"shield failed: {type(e).__name__}: {e}")
                 frames = held.get("bb")
             bridge.ctx["shield_frames"] = frames
-            data = {"on": True, "bb": frames}
+            data = {"on": True, "bb": frames, "bb_end": bridge.ctx.get("shield_end")}
     bridge.emit({"type": "shield", "t": bridge.now(), "data": data})
     return {"ok": True, "on": data["on"], "frames": len(data["bb"] or [])}
 
@@ -779,7 +825,8 @@ def api_run_state(run_id: str) -> dict:
     b = get_bridge(run_id)
     return {"run_id": b.run_id, "kind": b.kind, "events": len(b.buffer),
             "finished": b.finished, "superseded": b.superseded,
-            "source": b.ctx.get("fallback_source"), "held": sorted(b.source)}
+            "source": b.ctx.get("fallback_source"), "held": sorted(b.source),
+            "config": {k: b.config.get(k) for k in ("bb", "twist_id", "brain")}}
 
 
 @app.websocket("/ws/{run_id}")
@@ -803,3 +850,8 @@ async def ws_run(websocket: WebSocket, run_id: str) -> None:
         pass
     finally:
         bridge.unsubscribe(q)
+
+
+from app.report import router as report_router  # noqa: E402
+
+app.include_router(report_router)
