@@ -1,0 +1,20 @@
+{
+ "rows": [
+  {
+   "bb": "bb-01",
+   "label": "CartPole-PPO",
+   "kind": "zero-query",
+   "agreement": 0.712,
+   "clone_reward": 500.0,
+   "bb_reward": 491.8
+  },
+  {
+   "bb": "bb-05",
+   "label": "LunarLander-PPO",
+   "kind": "zero-query",
+   "agreement": 0.388,
+   "clone_reward": 104.2,
+   "bb_reward": 248.9
+  }
+ ]
+}

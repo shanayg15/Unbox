@@ -13,4 +13,5 @@ EVENT_TYPES = {
     "shield":       "{on: bool, bb: [b64] | null}            # shielded black-box clip when on",
     "run_finished": "{eval: EvalReport as dict, total_queries, turns, seconds, cached: bool}",
     "error":        "{message}",
+    "snap":         "{turn, n_rows, input_tokens, feature_relevance: {feature: p}, anomaly_feature: {choice, probabilities, confidence}, next_probe: {choice, probabilities, confidence}, rule_support: {rule_id: p}}",
 }
