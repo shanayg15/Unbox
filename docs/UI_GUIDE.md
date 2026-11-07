@@ -78,6 +78,11 @@ An abstract and five numbered tables computed from `results/*.json`: headline me
 
 ---
 
+## Known limits (be ready for the question)
+
+- **One-to-one copies:** on CartPole flaws 1 and 2 the copy fails at exactly the same step as the robot (0 differing frames). On MountainCar flaw 1 the copy matches 92% of single decisions but, over a whole episode, it still reaches the goal while the robot gets stuck. Unbox flags this with its closed-loop check ("the copy's episode does not end like the robot's") and the red outline shows where they differ. The fix still works there: success 1/5 → 5/5.
+- **Fix results** (5 test starts, live black box): CartPole flaw 1 reward 345 → 500, success 3/5 → 5/5; CartPole flaw 2 reward 178 → 500, 1/5 → 5/5; MountainCar flaw 1 reward −146 → −99, 1/5 → 5/5.
+
 ## If something fails on stage
 
 - **Expected:** Muse takes 15 to 25 s per turn, so some live runs cannot reach 97% match inside 75 s. The app then switches by itself to our earlier run of the same robot and scenario, shows the banner "The live run could not finish within the time limit. Showing our earlier run of this exact configuration.", and replays it in at most 20 s. Apply fix and the report still run live on that data. Say: "Live runs are capped at 75 seconds; this is our earlier run of this exact configuration."
