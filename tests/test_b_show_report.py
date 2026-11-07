@@ -89,7 +89,7 @@ def test_fix_downloads(env):
     rep = client.get(f"/api/report/{bridge.run_id}").json()
     assert rep["fixed"] and rep["action"]["n_training"] > 0
     assert rep["action"]["correct_action"] in ("push_left", "push_right")
-    assert rep["action"]["text"].startswith("Retrain on situations where cart_x <")
+    assert rep["action"]["text"].startswith("Retrain on states where cart_x <")
     g = rep["guard_check"]
     assert g["n"] > 0 and g["pct"] > 0.99 and g["text"].startswith("Outside the flaw zone")
 
