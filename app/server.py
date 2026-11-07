@@ -43,6 +43,11 @@ try:
 except Exception:  # noqa: BLE001 - dotenv is optional
     pass
 
+# The live run renders clone clips (and the shield clip) from worker threads. On macOS the
+# default Cocoa SDL driver aborts the whole process off the main thread; use the dummy driver
+# (same guard as blackbox/policies.py).
+os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+
 ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = Path(__file__).parent / "static"
 FIXTURES_DIR = ROOT / "fixtures"

@@ -297,8 +297,7 @@ def report():
 # No threshold puts these in the band; each still fires and costs reward. Everything else must hit it.
 #   t-cp-1/bb-01: PPO already pushes left in most of that region, so the override rarely changes it
 #   t-cp-1/bb-02: same threshold, but the DQN sways far more, so it fires more
-#   t-ll-1/bb-06: the DQN rarely uses fire_main on the right, under 5% even at x > 0
-KNOWN_OFF_TARGET = {("t-cp-1", "bb-01"), ("t-cp-1", "bb-02"), ("t-ll-1", "bb-06")}
+KNOWN_OFF_TARGET = {("t-cp-1", "bb-01"), ("t-cp-1", "bb-02")}
 
 
 def test_twists_fire_on_5_to_30_percent_of_steps(report):
