@@ -19,6 +19,7 @@ Program rules:
 - Every threshold or gain is a parameter in P with an initial guess. Never hard-code a number you guessed.
   An optimizer fits P to the data after you answer.
 - Prefer a few rules that explain most decisions. Add a rule only when counterexamples demand it.
+- Write every confirmed ledger rule as its own explicit if-branch (region overrides before the general law).
 
 Ledger rules:
 - One entry per rule, plain English, citing query ids as evidence. Ledger rule text: 12 words max.

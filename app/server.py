@@ -708,8 +708,15 @@ def api_fix(req: RunRef) -> dict:
         try:
             import agent.fixer as fixer
 
+            from app.report import failing_region
+
+            diag = failing_region(bridge)
+            label = reveal["label"]
+            if diag and diag.get("sentence"):
+                label += (f'. Unbox diagnosis (confirmed by probe experiments): {diag["sentence"]}'
+                          + (f' (line {diag["line"]} of the program)' if diag.get("line") else ""))
             out = fixer.fix(program, (bridge.last("ledger") or {}).get("entries", []),
-                            reveal["label"], bridge.config.get("brain", "muse"), bridge.run_id)
+                            label, bridge.config.get("brain", "muse"), bridge.run_id)
             data = {"code": out["code"], "params": out.get("params", {}),
                     "diff": out.get("diff") or "".join(difflib.unified_diff(
                         program["code"].splitlines(keepends=True),
@@ -727,6 +734,11 @@ def api_fix(req: RunRef) -> dict:
             _error(bridge, f"Fix failed: {type(e).__name__}: {e}")
             raise HTTPException(500, f"fix failed: {type(e).__name__}: {e}")
 
+    if "clone" not in data:
+        try:
+            data.update(fixed_clip(bridge, data))
+        except Exception as e:  # noqa: BLE001 - the clip is a nicety; the fix stands without it
+            print(f"[fix] fixed-copy clip skipped: {type(e).__name__}: {e}")
     bridge.ctx["fix"] = data
     ev = bridge.emit({"type": "fix", "t": bridge.now(), "data": data})
     if bridge.kind == "live":
@@ -737,6 +749,43 @@ def api_fix(req: RunRef) -> dict:
 class ShieldReq(BaseModel):
     run_id: str
     on: bool
+
+
+def fixed_clip(bridge: Bridge, fix: dict, *, max_steps: int = 1000, frame_every: int = 3) -> dict:
+    """The corrected copy driving the robot from the demo start state (bottom panel after the fix)."""
+    import base64
+    import io
+
+    from PIL import Image
+
+    ctx = bridge.ctx
+    bb, numerics = ctx.get("bb"), ctx.get("numerics")
+    if bb is None or numerics is None:
+        return {}
+    fixed = numerics.load_program(fix["code"], bb.spec())
+    env, obs = make_env_factory(ctx.get("env_id") or "CartPole-v1", render=True)(ctx["demo_seed"])
+    frames: list[str] = []
+    rewards: list[float] = []
+    term = trunc = False
+    try:
+        for step in range(max_steps):
+            if step % frame_every == 0:
+                im = Image.fromarray(env.render())
+                im = im.resize((360, round(360 * im.height / im.width)))
+                buf = io.BytesIO()
+                im.save(buf, "JPEG", quality=60)
+                frames.append(base64.b64encode(buf.getvalue()).decode())
+            a = fixed(obs, fix.get("params") or {})
+            o, r, term, trunc, _ = env.step(a)
+            rewards.append(float(r))
+            obs = [float(v) for v in o]
+            if term or trunc:
+                break
+    finally:
+        env.close()
+    return {"clone": frames, "clone_end": {"terminated": bool(term), "truncated": bool(trunc),
+                                           "steps": len(rewards), "total_reward": float(sum(rewards)),
+                                           "last_reward": rewards[-1] if rewards else None}}
 
 
 def shield_clip(bridge: Bridge, *, max_steps: int = 1000, frame_every: int = 3) -> list[str]:
@@ -754,6 +803,10 @@ def shield_clip(bridge: Bridge, *, max_steps: int = 1000, frame_every: int = 3) 
     spec = bb.spec()
     rec = numerics.load_program(program["code"], spec)
     fixed = numerics.load_program(fix["code"], spec)
+    from app.report import failing_region, guarded_action
+
+    reg = failing_region(bridge)
+    j = spec.obs_names.index(reg["feature"]) if reg and reg.get("feature") in spec.obs_names else None
     env, obs = make_env_factory(ctx.get("env_id") or "CartPole-v1", render=True)(ctx["demo_seed"])
     frames: list[str] = []
     rewards: list[float] = []
@@ -767,7 +820,7 @@ def shield_clip(bridge: Bridge, *, max_steps: int = 1000, frame_every: int = 3) 
                 im.save(buf, "JPEG", quality=60)
                 frames.append(base64.b64encode(buf.getvalue()).decode())
             bb_action = bb.act([obs], source="probe").actions[0]
-            a = numerics.shielded_action(rec, program["params"], fixed, fix["params"], obs, bb_action)
+            a = guarded_action(numerics, rec, program["params"], fixed, fix["params"], obs, bb_action, reg, j)
             o, r, term, trunc, _ = env.step(a)
             rewards.append(float(r))
             obs = [float(v) for v in o]

@@ -140,6 +140,22 @@ def render_pair(bb, env_factory, fn, params, demo_seed: int, frame_every: int = 
     return out
 
 
+def _closed_loop_note(clip: dict, demo_seed: int) -> str:
+    """Compare how the robot's and the copy's episodes from the same start state end."""
+    a, b = clip.get("bb_end") or {}, clip.get("clone_end") or {}
+    if not a or not b:
+        return ""
+    sa, sb = int(a.get("steps") or 0), int(b.get("steps") or 0)
+    same_end = bool(a.get("terminated")) == bool(b.get("terminated"))
+    if same_end and abs(sa - sb) <= max(15, 0.15 * max(sa, 1)):
+        return ""
+    how = lambda e, n: f"{'terminated' if e.get('terminated') else 'ran to the time limit'} after {n} steps"  # noqa: E731
+    return (f"CLOSED-LOOP CHECK: from start state {demo_seed} the robot's own episode {how(a, sa)}, but your "
+            f"program's episode {how(b, sb)}. Your program is not yet a one-to-one copy: it misses a rule the "
+            f"robot follows. Write every confirmed ledger rule as its own explicit if-branch (region overrides "
+            f"before the general law), with its threshold in P.")
+
+
 def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
         budget: int, max_turns: int, live: bool, timeout_s: float | None,
         policy_label: str, demo_seed: int = 0) -> dict:
@@ -215,6 +231,7 @@ def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
     # 3. turns -------------------------------------------------------------------
     longest_turn_s, turn_t0 = 0.0, None
     stopped_for_time = False
+    closed_loop_note = ""
     for turn in range(1, max_turns + 1):
         if turn_t0 is not None:
             longest_turn_s = max(longest_turn_s, time.time() - turn_t0)
@@ -243,7 +260,8 @@ def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
         msgs = [{"role": "system", "content": prompts.system_prompt()},
                 {"role": "user", "content": _turn_context(spec, bb.query_count(), budget, turn, max_turns, version,
                                                           agreement, params, code, ledger, len(X), hints, scan,
-                                                          use_snap, probe_results, cex, last_error,
+                                                          use_snap, probe_results, cex,
+                                                          (last_error + " " + closed_loop_note).strip(),
                                                           batches if full_ctx else None)}]
         E("status", text=f"Turn {turn}: Muse is thinking")
         try:
@@ -291,6 +309,10 @@ def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
                         try:
                             clip = render_pair(bb, env_factory, fn, params, demo_seed)
                             E("frames", version=version, **clip)
+                            closed_loop_note = _closed_loop_note(clip, demo_seed)
+                            if closed_loop_note:
+                                E("status", text="Closed-loop check: the copy's episode does not end like "
+                                                 "the robot's; asking Muse for the missing rule")
                         except Exception as e:  # noqa: BLE001
                             E("status", text=f"clip skipped ({type(e).__name__})")
 
@@ -346,7 +368,8 @@ def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
         # stop? ----------------------------------------------------------------
         if agreement is not None:
             history.append(agreement)
-        prober_quiet = fn is not None and len(cex) < 2
+        # a copy whose own episode ends differently from the robot's is not one-to-one yet
+        prober_quiet = fn is not None and len(cex) < 2 and not closed_loop_note
         if agreement is not None and agreement >= TARGET_AGREEMENT and prober_quiet:
             E("status", text=f"Target reached: {agreement:.1%} holdout match and the prober found nothing new")
             break

@@ -15,6 +15,9 @@ FIX_GUIDANCE = """How to fix it:
 - The unwanted behavior is a hidden special case. Find the one rule (usually an override branch that applies only
   in some region of the inputs) that produces it, and remove or neutralize just that branch.
 - Do NOT retune the general control law. Keep every other parameter at exactly the value given above.
+- The diagnosis names the region and the forced action. If your program has an explicit branch for it, remove
+  or neutralize that branch. If it has none, return the program unchanged and say so in the explanation: the
+  general law already gives the correct action there, and the runtime guard applies it inside that region.
 - changed_rule_ids lists only the ledger rules your edit removes or changes."""
 
 

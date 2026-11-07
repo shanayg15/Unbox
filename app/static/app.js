@@ -26,7 +26,7 @@ function resetRun() {
     budget: 5000, queries: 0, observed: 0, metrics: [], best: null, shownCode: null,
     ledger: [], highlight: new Set(), snaps: [],
     fix: null, revealed: null, report: null, finishedData: null, fixing: false, fixStep: -1, fixError: null,
-    clip: null, shield: { on: false, bb: null, bb_end: null }, viewFixed: false,
+    clip: null, shield: { on: false, bb: null, bb_end: null }, viewFixed: false, fixClip: null,
   });
 }
 Object.assign(S, { runId: null, kind: null, config: {} });
@@ -350,8 +350,13 @@ function onFix(d) {
   const pIdx = rows.findIndex((l) => l.startsWith("@@") && l.includes("params"));
   const codeRows = pIdx >= 0 ? rows.slice(0, pIdx) : rows;
   const nAdd = codeRows.filter((l) => l[0] === "+").length, nDel = codeRows.filter((l) => l[0] === "-").length;
-  $("fixExplain").innerHTML = `<div class="ck">Change made by Muse: ${nDel} line${nDel === 1 ? "" : "s"} removed, ${nAdd} added</div>${esc(d.explanation || "")}`;
+  const reg = S.report && S.report.region ? S.report.region.text : "the flaw zone";
+  $("fixExplain").innerHTML = nAdd + nDel
+    ? `<div class="ck">Change made by Muse: ${nDel} line${nDel === 1 ? "" : "s"} removed, ${nAdd} added</div>${esc(d.explanation || "")}`
+    : `<div class="ck">No code change needed</div>The recovered policy has no separate branch for the failing rule: its general law already selects the correct action in ${esc(reg)}. The runtime guard applies it there. ${esc(d.explanation || "")}`;
   $("fixExplain").hidden = false;
+  $("diff").hidden = !(nAdd + nDel);
+  S.fixClip = d.clone && d.clone.length ? { clone: d.clone, clone_end: d.clone_end } : null;
   logLine("Fix written to the recovered policy", S.lastT, "ok");
   loadReport();
 }
@@ -370,6 +375,8 @@ function setView(fixed) {
   $("viewOrig").classList.toggle("on", !S.viewFixed);
   $("bbPanel").classList.toggle("guarded", S.viewFixed);
   $("bbTitle").textContent = S.viewFixed ? "Deployed policy · fix applied" : "Deployed policy";
+  $("cloneTitle").textContent = S.viewFixed && S.fixClip ? "Recovered policy · fixed" : "Recovered policy";
+  $("clonePanel").classList.toggle("guarded", S.viewFixed && !!S.fixClip);
   pill("bbPill", S.viewFixed ? "With fix" : S.shield.on ? "Original" : S.clip ? "Running" : "Idle", S.viewFixed ? "ok" : "");
   if (S.clip) startPlayer();
 }
@@ -466,6 +473,10 @@ function onFrames(d) {
 
 function bbFrames() { return S.viewFixed && S.shield.bb ? S.shield.bb : S.clip.bb; }
 function bbEndInfo() { return S.viewFixed && S.shield.bb ? S.shield.bb_end : S.clip.bb_end; }
+function cloneClip() {
+  if (S.viewFixed && S.fixClip) return { frames: S.fixClip.clone, end: S.fixClip.clone_end, disagree: [] };
+  return { frames: S.clip.clone, end: S.clip.clone_end, disagree: S.clip.disagree };
+}
 
 function startPlayer() {
   if (!S.clip) return;
@@ -491,12 +502,13 @@ function endLabel(end) {
 function tick() {
   const c = S.clip;
   if (!c) return;
-  const bf = bbFrames(), n = Math.max(bf.length, c.clone.length);
+  const cc = cloneClip();
+  const bf = bbFrames(), n = Math.max(bf.length, cc.frames.length);
   const i = player.i;
   if (i >= n) {                           // hold the final frame with its label, then loop
     clearInterval(player.timer);
     if (bf.length) { $("bbEnd").textContent = endLabel(bbEndInfo()); $("bbEnd").hidden = false; }
-    if (c.clone.length) { $("cloneEnd").textContent = endLabel(c.clone_end); $("cloneEnd").hidden = false; }
+    if (cc.frames.length) { $("cloneEnd").textContent = endLabel(cc.end); $("cloneEnd").hidden = false; }
     $("clonePanel").classList.remove("disagree");
     player.hold = setTimeout(startPlayer, HOLD_MS);
     return;
@@ -504,12 +516,12 @@ function tick() {
   if (i < bf.length) { $("bbImg").src = "data:image/jpeg;base64," + bf[i]; $("bbEnd").hidden = true; }
   else if (bf.length) { $("bbEnd").textContent = endLabel(bbEndInfo()); $("bbEnd").hidden = false; }
   let red = false;
-  if (c.clone.length) {
-    if (i < c.clone.length) {
-      $("cloneImg").src = "data:image/jpeg;base64," + c.clone[i];
-      red = !!c.disagree[i];
+  if (cc.frames.length) {
+    if (i < cc.frames.length) {
+      $("cloneImg").src = "data:image/jpeg;base64," + cc.frames[i];
+      red = !!cc.disagree[i];
       $("cloneEnd").hidden = true;
-    } else { $("cloneEnd").textContent = endLabel(c.clone_end); $("cloneEnd").hidden = false; }
+    } else { $("cloneEnd").textContent = endLabel(cc.end); $("cloneEnd").hidden = false; }
   } else $("cloneImg").removeAttribute("src");
   $("clonePanel").classList.toggle("disagree", red);
   $("frameNote").textContent = `start state #${c.seed ?? "—"} · frame ${i + 1}/${n}`;
@@ -536,6 +548,8 @@ function softReset() {
   $("params").innerHTML = "";
   $("codeTitle").textContent = "Recovered policy";
   $("bbTitle").textContent = "Deployed policy";
+  $("cloneTitle").textContent = "Recovered policy";
+  $("clonePanel").classList.remove("guarded");
   $("bbPanel").classList.remove("guarded"); $("clonePanel").classList.remove("disagree");
   $("bbImg").removeAttribute("src"); $("cloneImg").removeAttribute("src");
   $("bbEmpty").hidden = false; $("cloneEmpty").hidden = false;

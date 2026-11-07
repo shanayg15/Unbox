@@ -417,6 +417,31 @@ def _found(bridge, events, spec, revealed, truth, failing) -> str | None:
 
 
 # ------------------------------------------------------------------------------- fixed-copy numbers
+def guarded_action(n, rec, rp, fixed, fp, obs, a_bb, reg: dict | None = None, j: int | None = None):
+    """Runtime guard. Inside the diagnosed flaw zone the corrected policy decides; elsewhere the
+    contract's shielded_action (network's own action unless the flawed and fixed copies disagree)."""
+    if reg is not None and j is not None and _inside(obs, j, reg["op"], reg["value"]):
+        return fixed(obs, fp)
+    return n.shielded_action(rec, rp, fixed, fp, obs, a_bb)
+
+
+def failing_region(bridge) -> dict | None:
+    """{feature, op, value, sentence, line} of the diagnosed failure (cached once the flaw is revealed)."""
+    reg = bridge.ctx.get("failing_region")
+    if reg:
+        return reg
+    try:
+        f = build_report(bridge).get("failing")
+    except Exception:  # noqa: BLE001
+        return None
+    if f and f.get("feature") and f.get("op") and f.get("value") is not None:
+        reg = {k: f.get(k) for k in ("feature", "op", "value", "sentence", "line", "action_name")}
+        if bridge.ctx.get("reveal") is not None:
+            bridge.ctx["failing_region"] = reg
+        return reg
+    return None
+
+
 def _programs(bridge, spec, prog: dict, fix: dict):
     n = _numerics(bridge)
     rec = n.load_program(prog["code"], spec)
@@ -516,6 +541,8 @@ def _compute_cost(bridge, prog: dict, fix: dict) -> None:
         spec = bb.spec()
         n, rec, fixed = _programs(bridge, spec, prog, fix)
         rp, fp = prog.get("params") or {}, fix.get("params") or {}
+        reg = ctx.get("failing_region")
+        j = spec.obs_names.index(reg["feature"]) if reg and reg.get("feature") in spec.obs_names else None
         threshold = None
         try:
             import gymnasium as gym
@@ -530,7 +557,7 @@ def _compute_cost(bridge, prog: dict, fix: dict) -> None:
             try:
                 for _ in range(1000):
                     a_bb = bb.act([obs], source="probe").actions[0]
-                    a = n.shielded_action(rec, rp, fixed, fp, obs, a_bb)
+                    a = guarded_action(n, rec, rp, fixed, fp, obs, a_bb, reg, j)
                     o, r, term, trunc, _ = env.step(int(a) if spec.action_type == "discrete" else a)
                     total += float(r)
                     obs = [float(v) for v in o]
@@ -651,6 +678,9 @@ def build_report(bridge) -> dict:
         except Exception as e:  # noqa: BLE001
             errors.append(f"guard check: {type(e).__name__}: {e}"[:200])
         if shield and shield.get("on"):
+            if failing and failing.get("feature") and "failing_region" not in bridge.ctx:
+                bridge.ctx["failing_region"] = {k: failing.get(k) for k in
+                                                ("feature", "op", "value", "sentence", "line", "action_name")}
             cost = _cost(bridge, prog, fix)
 
     found = _found(bridge, events, spec, revealed, truth, failing_info) if has_flaw else None
