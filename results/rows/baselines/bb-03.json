@@ -1,0 +1,12 @@
+{
+ "bb": "bb-03",
+ "label": "MountainCar-DQN",
+ "kind": "zero-query",
+ "model": "muse-spark-1.1",
+ "agreement": 0.8866,
+ "clone_reward": -113.5,
+ "bb_reward": -95.3,
+ "bound_95": null,
+ "lines_of_code": 15,
+ "code": "def policy(obs, P):\n    x = obs[0]\n    v = obs[1]\n    v_thr = P['v_thr']\n    x_left = P['x_left']\n    x_right = P['x_right']\n    if x > x_right:\n        return 2\n    if v > v_thr:\n        return 2\n    if v < -v_thr:\n        return 0\n    if x < x_left:\n        return 0\n    return 2"
+}

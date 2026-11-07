@@ -447,7 +447,8 @@ def _run_thread(bridge: Bridge, cfg: dict) -> None:
         try:
             result.update(agent_loop.run(
                 bb, cfg["brain"],
-                env_factory=make_env_factory(info.get("env_id", "CartPole-v1")),
+                # render=True: render_pair draws the clone clip with env.render()
+                env_factory=make_env_factory(info.get("env_id", "CartPole-v1"), render=True),
                 numerics=numerics, emit=emit, store=_store(), run_id=bridge.run_id,
                 budget=int(os.getenv("QUERY_BUDGET", "5000")),
                 max_turns=int(os.getenv("LIVE_MAX_TURNS", "4")),

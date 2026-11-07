@@ -1,0 +1,12 @@
+{"ts":1794085378.757836,"provider":"subq","model":"subq-snap-1.1","n_questions":6,"state_chars":50091,"latency_ms":983,"input_tokens":24455,"prompt_tokens":24455,"completion_tokens":0,"ok":true,"error":null}
+{"ts":1794085388.200763,"provider":"muse","model":"muse-spark-1.1","latency_ms":9440,"prompt_tokens":1426,"completion_tokens":2825,"ok":true,"error":null,"finish_reason":"stop","content_chars":1976}
+{"ts":1794085389.864172,"provider":"subq","model":"subq-snap-1.1","n_questions":9,"state_chars":56604,"latency_ms":1128,"input_tokens":27761,"prompt_tokens":27761,"completion_tokens":0,"ok":true,"error":null}
+{"ts":1794085418.680202,"provider":"muse","model":"muse-spark-1.1","latency_ms":28812,"prompt_tokens":2224,"completion_tokens":10503,"ok":true,"error":null,"finish_reason":"stop","content_chars":2843}
+{"ts":1794085420.582266,"provider":"subq","model":"subq-snap-1.1","n_questions":11,"state_chars":62324,"latency_ms":1442,"input_tokens":30736,"prompt_tokens":30736,"completion_tokens":0,"ok":true,"error":null}
+{"ts":1794085439.3503711,"provider":"muse","model":"muse-spark-1.1","latency_ms":18759,"prompt_tokens":2555,"completion_tokens":7530,"ok":true,"error":null,"finish_reason":"stop","content_chars":2618}
+{"ts":1794085441.235667,"provider":"subq","model":"subq-snap-1.1","n_questions":10,"state_chars":67769,"latency_ms":1478,"input_tokens":33423,"prompt_tokens":33423,"completion_tokens":0,"ok":true,"error":null}
+{"ts":1794085464.42709,"provider":"muse","model":"muse-spark-1.1","latency_ms":23184,"prompt_tokens":2648,"completion_tokens":8369,"ok":true,"error":null,"finish_reason":"stop","content_chars":3283}
+{"ts":1794085466.55468,"provider":"subq","model":"subq-snap-1.1","n_questions":11,"state_chars":73437,"latency_ms":983,"input_tokens":36360,"prompt_tokens":36360,"completion_tokens":0,"ok":true,"error":null}
+{"ts":1794085483.221181,"provider":"muse","model":"muse-spark-1.1","latency_ms":16663,"prompt_tokens":3094,"completion_tokens":7193,"ok":true,"error":null,"finish_reason":"stop","content_chars":4014}
+{"ts":1794085485.555865,"provider":"subq","model":"subq-snap-1.1","n_questions":12,"state_chars":79144,"latency_ms":1682,"input_tokens":39323,"prompt_tokens":39323,"completion_tokens":0,"ok":true,"error":null}
+{"ts":1794085498.125317,"provider":"muse","model":"muse-spark-1.1","latency_ms":12565,"prompt_tokens":3164,"completion_tokens":5018,"ok":true,"error":null,"finish_reason":"stop","content_chars":3115}

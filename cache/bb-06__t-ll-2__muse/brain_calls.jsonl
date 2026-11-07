@@ -1,0 +1,13 @@
+{"ts":1794085491.9533608,"provider":"subq","model":"subq-snap-1.1","n_questions":10,"state_chars":256131,"latency_ms":2081,"input_tokens":149631,"prompt_tokens":149631,"completion_tokens":0,"ok":true,"error":null}
+{"ts":1794085508.889596,"provider":"muse","model":"muse-spark-1.1","latency_ms":16926,"prompt_tokens":1937,"completion_tokens":5678,"ok":true,"error":null,"finish_reason":"stop","content_chars":3556}
+{"ts":1794085517.05647,"provider":"subq","model":"subq-snap-1.1","n_questions":19,"state_chars":265414,"latency_ms":2147,"input_tokens":155460,"prompt_tokens":155460,"completion_tokens":0,"ok":true,"error":null}
+{"ts":1794085559.311083,"provider":"muse","model":"muse-spark-1.1","latency_ms":42243,"prompt_tokens":3452,"completion_tokens":15276,"ok":true,"error":null,"finish_reason":"stop","content_chars":6688}
+{"ts":1794085569.976744,"provider":"subq","model":"subq-snap-1.1","n_questions":21,"state_chars":273178,"latency_ms":2500,"input_tokens":160264,"prompt_tokens":160264,"completion_tokens":0,"ok":true,"error":null}
+{"ts":1794085619.187616,"provider":"muse","model":"muse-spark-1.1","latency_ms":49199,"prompt_tokens":3945,"completion_tokens":16000,"ok":true,"error":null,"finish_reason":"length","content_chars":4729}
+{"ts":1794085645.921669,"provider":"muse","model":"muse-spark-1.1","latency_ms":26732,"prompt_tokens":3976,"completion_tokens":8700,"ok":true,"error":null,"finish_reason":"stop","content_chars":3217}
+{"ts":1794085655.9896672,"provider":"subq","model":"subq-snap-1.1","n_questions":23,"state_chars":280936,"latency_ms":2075,"input_tokens":165099,"prompt_tokens":165099,"completion_tokens":0,"ok":true,"error":null}
+{"ts":1794085685.547969,"provider":"muse","model":"muse-spark-1.1","latency_ms":29542,"prompt_tokens":4157,"completion_tokens":12152,"ok":true,"error":null,"finish_reason":"stop","content_chars":5692}
+{"ts":1794085695.784061,"provider":"subq","model":"subq-snap-1.1","n_questions":24,"state_chars":288414,"latency_ms":2170,"input_tokens":169654,"prompt_tokens":169654,"completion_tokens":0,"ok":true,"error":null}
+{"ts":1794085727.1932318,"provider":"muse","model":"muse-spark-1.1","latency_ms":31396,"prompt_tokens":4376,"completion_tokens":10314,"ok":true,"error":null,"finish_reason":"stop","content_chars":4716}
+{"ts":1794085737.381264,"provider":"subq","model":"subq-snap-1.1","n_questions":24,"state_chars":296078,"latency_ms":2122,"input_tokens":174303,"prompt_tokens":174303,"completion_tokens":0,"ok":true,"error":null}
+{"ts":1794085775.1950579,"provider":"muse","model":"muse-spark-1.1","latency_ms":37806,"prompt_tokens":4527,"completion_tokens":11546,"ok":true,"error":null,"finish_reason":"stop","content_chars":3414}

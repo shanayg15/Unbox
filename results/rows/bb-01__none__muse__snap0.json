@@ -1,0 +1,31 @@
+{
+ "bb": "bb-01",
+ "label": "CartPole-PPO",
+ "twist": "none",
+ "brain": "muse",
+ "model": "muse-spark-1.1",
+ "snap": false,
+ "agreement": 0.9985,
+ "clone_reward": 500.0,
+ "bb_reward": 500.0,
+ "bound_95": 0.15,
+ "n_failures": 0,
+ "lines_of_code": 10,
+ "queries": 544,
+ "turns": 1,
+ "seconds": 12.0,
+ "speedup": 11.0,
+ "twist_found": false,
+ "queries_to_twist": null,
+ "turns_to_twist": null,
+ "brain_errors": 0,
+ "ok": true,
+ "run_id": "batch-1107-130245-bb-01__none__muse__snap0",
+ "code": "def policy(obs, P):\n    x = obs[0]\n    v = obs[1]\n    th = obs[2]\n    thd = obs[3]\n    s = th + P['k']*thd + P['kx']*x + P['kv']*v - P['thr']\n    if s > 0:\n        return 1\n    else:\n        return 0\n",
+ "params": {
+  "k": 0.4725178627102765,
+  "kx": 0.24459491363006755,
+  "kv": 0.31258854428699334,
+  "thr": -0.01406429869850747
+ }
+}

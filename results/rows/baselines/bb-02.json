@@ -1,0 +1,12 @@
+{
+ "bb": "bb-02",
+ "label": "CartPole-DQN",
+ "kind": "zero-query",
+ "model": "muse-spark-1.1",
+ "agreement": 0.5903,
+ "clone_reward": 324.1,
+ "bb_reward": 500.0,
+ "bound_95": null,
+ "lines_of_code": 18,
+ "code": "def policy(obs, P):\n    x = obs[0]\n    v = obs[1]\n    theta = obs[2]\n    theta_dot = obs[3]\n    if abs(x) > P['x_critical']:\n        if x > 0:\n            return 0\n        else:\n            return 1\n    if abs(x) > P['x_thresh']:\n        u = P['k_theta_edge']*theta + P['k_thetadot_edge']*theta_dot - P['k_x_edge']*x - P['k_v_edge']*v\n    else:\n        u = P['k_theta']*theta + P['k_thetadot']*theta_dot - P['k_x']*x - P['k_v']*v\n    if u > P['u_thresh']:\n        return 1\n    else:\n        return 0\n"
+}

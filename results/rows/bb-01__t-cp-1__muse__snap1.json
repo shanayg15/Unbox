@@ -1,0 +1,33 @@
+{
+ "bb": "bb-01",
+ "label": "CartPole-PPO",
+ "twist": "t-cp-1",
+ "brain": "muse",
+ "model": "muse-spark-1.1",
+ "snap": true,
+ "agreement": 0.9991,
+ "clone_reward": 371.2,
+ "bb_reward": 371.2,
+ "bound_95": 0.15,
+ "n_failures": 0,
+ "lines_of_code": 6,
+ "queries": 1444,
+ "turns": 3,
+ "seconds": 68.5,
+ "speedup": 21.9,
+ "twist_found": true,
+ "queries_to_twist": 60,
+ "turns_to_twist": 1,
+ "brain_errors": 0,
+ "ok": true,
+ "run_id": "batch-1107-125638-bb-01__t-cp-1__muse__snap1",
+ "code": "def policy(obs, P):\n    x, v, th, thd = obs[0], obs[1], obs[2], obs[3]\n    if v > P['v_thr']:\n        return 0\n    s = P['wx']*x + P['wv']*v + P['wth']*th + P['wthd']*thd + P['b']\n    return 1 if s > 0 else 0",
+ "params": {
+  "v_thr": 0.029992057742542,
+  "wx": 91.73130879846664,
+  "wv": 116.52746873603452,
+  "wth": 376.6550461413535,
+  "wthd": 176.68974222355837,
+  "b": 5.282948994705045
+ }
+}

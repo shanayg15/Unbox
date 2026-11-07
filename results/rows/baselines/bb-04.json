@@ -1,0 +1,12 @@
+{
+ "bb": "bb-04",
+ "label": "Acrobot-PPO",
+ "kind": "zero-query",
+ "model": "muse-spark-1.1",
+ "agreement": 0.7822,
+ "clone_reward": -105.0,
+ "bb_reward": -73.7,
+ "bound_95": null,
+ "lines_of_code": 34,
+ "code": "def policy(obs, P):\n    cos1 = obs[0]\n    sin1 = obs[1]\n    cos2 = obs[2]\n    sin2 = obs[3]\n    v1 = obs[4]\n    v2 = obs[5]\n    cos12 = cos1*cos2 - sin1*sin2\n    sin12 = sin1*cos2 + cos1*sin2\n    PE = 2.0 - cos1 - cos12\n    if PE > P['pe_thr']:\n        u = -P['kp1']*sin1 - P['kp2']*sin12 - P['kd1']*v1 - P['kd2']*v2\n        if u > P['th_b']:\n            return 2\n        elif u < -P['th_b']:\n            return 0\n        else:\n            return 1\n    KE = P['k1']*v1*v1 + P['k2']*v2*v2\n    E = P['pe']*PE + KE\n    err = P['Ed'] - E\n    if np.abs(v1) < P['v_min'] and np.abs(v2) < P['v_min']:\n        return 2\n    u_e = P['ge']*err*v2\n    u_p = -P['gv1']*v1*cos2\n    u = u_e + u_p\n    if u > P['th']:\n        return 2\n    elif u < -P['th']:\n        return 0\n    else:\n        if sin1*v1 < 0:\n            return 2 if v1 > 0 else 0\n        return 1\n"
+}

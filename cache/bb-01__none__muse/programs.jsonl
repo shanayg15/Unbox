@@ -1,0 +1,1 @@
+{"version":1,"code":"def policy(obs, P):\n    x = obs[0]\n    v = obs[1]\n    th = obs[2]\n    thd = obs[3]\n    s = P['w_x']*x + P['w_v']*v + P['w_th']*th + P['w_thd']*thd + P['b']\n    return 1 if s > 0 else 0","params":{"w_x":40.72882163183639,"w_v":51.93418653846305,"w_th":168.10242677782207,"w_thd":78.61710638595873,"b":2.3434761732456364},"agreement":0.99875}

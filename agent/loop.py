@@ -186,10 +186,15 @@ def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
     turns_done = 0
 
     # 3. turns -------------------------------------------------------------------
+    longest_turn_s, turn_t0 = 0.0, None
     for turn in range(1, max_turns + 1):
-        if over_time():
+        if turn_t0 is not None:
+            longest_turn_s = max(longest_turn_s, time.time() - turn_t0)
+        # live: don't start a turn that can't finish before the time limit (the app gives up then)
+        if over_time() or (timeout_s is not None and time.time() - t0 + longest_turn_s > timeout_s):
             E("status", text="Live time limit reached")
             break
+        turn_t0 = time.time()
         turns_done = turn
 
         scan = None

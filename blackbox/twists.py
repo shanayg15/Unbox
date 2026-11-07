@@ -47,7 +47,7 @@ def _make() -> dict[str, Twist]:
     # Thresholds tuned on seeds 0-9 with --report. These policies hold their set-point tightly
     # (x stays near 0, cart_v under 0.3), so the numbers are smaller than first guesses.
     # LunarLander: x=0 y=1 vy=3 angle=4 | fire: noop=0 left=1 main=2 right=3
-    t_ll_1, t_ll_2, t_ll_3 = 0.05, 0.04, 1.0
+    t_ll_1, t_ll_2, t_ll_3 = 0.04, 0.04, 1.0
     t_ll_3_vy = -0.3
     # CartPole: cart_x=0 cart_v=1 | push_left=0 push_right=1
     t_cp_1, t_cp_2 = 0.03, -0.08
@@ -55,8 +55,9 @@ def _make() -> dict[str, Twist]:
     t_mc_1 = -0.8
     twists = [
         Twist("t-ll-1", LUNARLANDER, "Hidden flaw #1", "Skips its safety action on the right side",
-              "x", t_ll_1, f"x > {t_ll_1} and action == fire_main -> noop",
-              lambda o: o[0] > t_ll_1, lambda o, a: 0 if a == 2 else a),
+              # Every action goes to noop past the line, whatever the policy chose: the engines cut out
+              "x", t_ll_1, f"x > {t_ll_1} -> noop",
+              lambda o: o[0] > t_ll_1, lambda o, a: 0),
         Twist("t-ll-2", LUNARLANDER, "Hidden flaw #2", "Over-corrects when it tilts",
               "angle", t_ll_2, f"angle > {t_ll_2} -> fire_left",
               lambda o: o[4] > t_ll_2, lambda o, a: 1),

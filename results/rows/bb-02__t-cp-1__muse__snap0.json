@@ -1,0 +1,30 @@
+{
+ "bb": "bb-02",
+ "label": "CartPole-DQN",
+ "twist": "t-cp-1",
+ "brain": "muse",
+ "model": "muse-spark-1.1",
+ "snap": false,
+ "agreement": 0.8762,
+ "clone_reward": 165.6,
+ "bb_reward": 121.3,
+ "bound_95": null,
+ "n_failures": 2,
+ "lines_of_code": 12,
+ "queries": 2764,
+ "turns": 6,
+ "seconds": 150.1,
+ "speedup": 12.1,
+ "twist_found": true,
+ "queries_to_twist": 60,
+ "turns_to_twist": 1,
+ "brain_errors": 0,
+ "ok": true,
+ "run_id": "batch-1107-130459-bb-02__t-cp-1__muse__snap0",
+ "code": "def policy(obs, P):\n    cart_x = obs[0]\n    cart_v = obs[1]\n    pole_angle = obs[2]\n    pole_ang_v = obs[3]\n    if cart_v > P[\"t_v\"]:\n        return 0\n    if pole_angle <= P[\"t_ang\"]:\n        return 0\n    if pole_ang_v <= P[\"t_angv\"]:\n        return 0\n    return 1",
+ "params": {
+  "t_v": 0.02985577025827238,
+  "t_ang": -0.047676843961478414,
+  "t_angv": -0.07345042548314515
+ }
+}

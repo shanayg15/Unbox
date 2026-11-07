@@ -1,0 +1,33 @@
+{
+ "bb": "bb-05",
+ "label": "LunarLander-PPO",
+ "twist": "t-ll-1",
+ "brain": "muse",
+ "model": "muse-spark-1.1",
+ "snap": true,
+ "agreement": 0.6978,
+ "clone_reward": -128.8,
+ "bb_reward": 8.3,
+ "bound_95": null,
+ "n_failures": 13,
+ "lines_of_code": 25,
+ "queries": 2769,
+ "turns": 6,
+ "seconds": 301.2,
+ "speedup": 20.8,
+ "twist_found": false,
+ "queries_to_twist": null,
+ "turns_to_twist": null,
+ "brain_errors": 0,
+ "ok": true,
+ "run_id": "batch-1107-125828-bb-05__t-ll-1__muse__snap1",
+ "code": "def policy(obs, P):\n    x=obs[0]; y=obs[1]; vx=obs[2]; vy=obs[3]; angle=obs[4]; ang_v=obs[5]; leg_left=obs[6]; leg_right=obs[7]\n    if x > P['x_thr'] and vy < -P['vy_thr']:\n        return 0\n    if angle < -P['a_thr']:\n        return 1\n    if angle > P['a_thr']:\n        return 3\n    if ang_v < -P['av_thr']:\n        return 1\n    if ang_v > P['av_thr']:\n        return 3\n    if leg_right > 0.5:\n        return 0\n    if x < -P['x_neg_thr']:\n        return 3\n    if x > P['x_thr']:\n        return 1\n    if vx < -P['vx_thr']:\n        return 3\n    if vx > P['vx_thr']:\n        return 1\n    if vy < -P['vy_thr']:\n        return 2\n    return 0",
+ "params": {
+  "a_thr": 0.2974680413441002,
+  "av_thr": 0.1612695253390211,
+  "vy_thr": 0.1512943984405458,
+  "vx_thr": 0.7100067578378588,
+  "x_thr": 0.05085764275711955,
+  "x_neg_thr": 0.9685888112123326
+ }
+}

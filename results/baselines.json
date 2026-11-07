@@ -1,0 +1,70 @@
+{
+ "rows": [
+  {
+   "bb": "bb-05",
+   "label": "LunarLander-PPO",
+   "kind": "zero-query",
+   "model": "muse-spark-1.1",
+   "agreement": 0.2705,
+   "clone_reward": -628.7,
+   "bb_reward": 245.5,
+   "bound_95": null,
+   "lines_of_code": 37
+  },
+  {
+   "bb": "bb-01",
+   "label": "CartPole-PPO",
+   "kind": "zero-query",
+   "model": "muse-spark-1.1",
+   "agreement": 0.8702,
+   "clone_reward": 324.1,
+   "bb_reward": 500.0,
+   "bound_95": null,
+   "lines_of_code": 18
+  },
+  {
+   "bb": "bb-06",
+   "label": "LunarLander-DQN",
+   "kind": "zero-query",
+   "model": "muse-spark-1.1",
+   "agreement": 0.278,
+   "clone_reward": -628.7,
+   "bb_reward": 136.9,
+   "bound_95": null,
+   "lines_of_code": 37
+  },
+  {
+   "bb": "bb-02",
+   "label": "CartPole-DQN",
+   "kind": "zero-query",
+   "model": "muse-spark-1.1",
+   "agreement": 0.5903,
+   "clone_reward": 324.1,
+   "bb_reward": 500.0,
+   "bound_95": null,
+   "lines_of_code": 18
+  },
+  {
+   "bb": "bb-03",
+   "label": "MountainCar-DQN",
+   "kind": "zero-query",
+   "model": "muse-spark-1.1",
+   "agreement": 0.8866,
+   "clone_reward": -113.5,
+   "bb_reward": -95.3,
+   "bound_95": null,
+   "lines_of_code": 15
+  },
+  {
+   "bb": "bb-04",
+   "label": "Acrobot-PPO",
+   "kind": "zero-query",
+   "model": "muse-spark-1.1",
+   "agreement": 0.7822,
+   "clone_reward": -105.0,
+   "bb_reward": -73.7,
+   "bound_95": null,
+   "lines_of_code": 34
+  }
+ ]
+}

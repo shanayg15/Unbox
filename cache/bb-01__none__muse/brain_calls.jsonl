@@ -1,0 +1,2 @@
+{"ts":1794085355.86411,"provider":"subq","model":"subq-snap-1.1","n_questions":6,"state_chars":344049,"latency_ms":2157,"input_tokens":164511,"prompt_tokens":164511,"completion_tokens":0,"ok":true,"error":null}
+{"ts":1794085362.9466329,"provider":"muse","model":"muse-spark-1.1","latency_ms":7075,"prompt_tokens":1990,"completion_tokens":2784,"ok":true,"error":null,"finish_reason":"stop","content_chars":2130}

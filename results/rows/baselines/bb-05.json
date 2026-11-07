@@ -1,0 +1,12 @@
+{
+ "bb": "bb-05",
+ "label": "LunarLander-PPO",
+ "kind": "zero-query",
+ "model": "muse-spark-1.1",
+ "agreement": 0.2705,
+ "clone_reward": -628.7,
+ "bb_reward": 245.5,
+ "bound_95": null,
+ "lines_of_code": 37,
+ "code": "def policy(obs, P):\n  x = obs[0]\n  y = obs[1]\n  vx = obs[2]\n  vy = obs[3]\n  angle = obs[4]\n  ang_v = obs[5]\n  leg_left = obs[6]\n  leg_right = obs[7]\n  angle_targ = np.clip(x * P['k_x'] + vx * P['k_vx'], -P['max_angle'], P['max_angle'])\n  hover_targ = abs(x) * P['k_hover'] + P['y_offset']\n  if leg_left or leg_right:\n    angle_targ = P['leg_angle_targ']\n    hover_targ = P['leg_hover_targ']\n  angle_err = angle_targ - angle\n  angle_todo = angle_err * P['k_ang'] - ang_v * P['k_angv']\n  hover_err = hover_targ - y\n  hover_todo = hover_err * P['k_h'] - vy * P['k_v']\n  if leg_left and leg_right:\n    if abs(angle) > P['land_angle_thresh']:\n      if angle_todo < 0:\n        return 1\n      else:\n        return 3\n    return 0\n  if abs(angle_todo) > P['ang_thresh']:\n    if angle_todo < 0:\n      return 1\n    else:\n      return 3\n  if abs(angle) < P['safe_angle']:\n    if hover_todo > P['hover_thresh'] or vy < P['vy_thresh']:\n      return 2\n  else:\n    if hover_todo > P['hover_thresh'] * P['hover_boost']:\n      return 2\n  return 0"
+}

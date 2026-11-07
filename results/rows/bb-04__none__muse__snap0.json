@@ -1,0 +1,30 @@
+{
+ "bb": "bb-04",
+ "label": "Acrobot-PPO",
+ "twist": "none",
+ "brain": "muse",
+ "model": "muse-spark-1.1",
+ "snap": false,
+ "agreement": 0.9093,
+ "clone_reward": -87.4,
+ "bb_reward": -73.7,
+ "bound_95": null,
+ "n_failures": 9,
+ "lines_of_code": 13,
+ "queries": 2764,
+ "turns": 6,
+ "seconds": 120.8,
+ "speedup": 22.8,
+ "twist_found": false,
+ "queries_to_twist": null,
+ "turns_to_twist": null,
+ "brain_errors": 0,
+ "ok": true,
+ "run_id": "batch-1107-132826-bb-04__none__muse__snap0",
+ "code": "def policy(obs, P):\n    cos1 = obs[0]\n    sin1 = obs[1]\n    cos2 = obs[2]\n    sin2 = obs[3]\n    v1 = obs[4]\n    v2 = obs[5]\n    if v1 < P[\"thr_v1\"]:\n        if sin1 < P[\"thr_s1_low\"] and v2 < P[\"thr_v2\"]:\n            return 0\n        return 2\n    else:\n        return 0\n",
+ "params": {
+  "thr_v1": -0.008975335937025361,
+  "thr_s1_low": -0.7123059454006242,
+  "thr_v2": 1.674827402576635
+ }
+}

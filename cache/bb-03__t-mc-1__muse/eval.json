@@ -1,0 +1,11 @@
+{
+  "open_loop_agreement": 0.9127954360228199,
+  "n_holdout_obs": 1227,
+  "clone_mean_reward": -157.9,
+  "bb_mean_reward": -141.25,
+  "n_episodes": 20,
+  "n_failures": 7,
+  "failure_rate_bound_95": null,
+  "us_per_action_clone": 0.19999995129182935,
+  "us_per_action_bb": 4.379546226118691
+}
