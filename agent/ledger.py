@@ -66,12 +66,15 @@ class Ledger:
         self.entries[new] = LedgerEntry(rule_id=new, text=text, status="probing", confidence=0.5)
         return new
 
-    def verdict(self, rule_id: str, status: str, confidence: float, query_id: str) -> None:
+    def verdict(self, rule_id: str, status: str, confidence: float, query_id: str,
+                extra_evidence: list[str] | tuple = ()) -> None:
+        """Python probe verdict. `extra_evidence`: e.g. the counterexample states a probe started from."""
         e = self.entries[rule_id]
         e.status = status
         e.confidence = round(float(confidence), 3)
-        if query_id not in e.evidence:
-            e.evidence.append(query_id)
+        for qid in [query_id, *extra_evidence]:
+            if qid and qid not in e.evidence:
+                e.evidence.append(qid)
         if status in ("confirmed", "refuted"):
             self._python_verdict.add(rule_id)
 

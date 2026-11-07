@@ -26,6 +26,7 @@ Ledger rules:
   refuted (evidence contradicts it). You can never mark a rule confirmed; the system does that from probes.
 
 Probes (max 3 per turn): design experiments that could REFUTE your hypothesis, not just support it.
+If a rule only applies in a specific situation (e.g. while firing an engine), set base to a counterexample state, not the median.
 Set done=true when agreement stops improving."""
 
 TURN = """SENSOR SPEC: {spec}

@@ -269,7 +269,8 @@ def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
         probe_results = []
         for p in out.get("probes") or []:
             try:
-                n_pts = len(probes_mod.expand(p, spec, X))
+                # `cex` = last turn's counterexamples, the ones Muse just saw: sweep from those states
+                n_pts = len(probes_mod.expand(p, spec, X, cex))
             except probes_mod.ProbeError as e:
                 probe_results.append({"rule_id": p.get("rule_id") or "new", "description": "invalid probe",
                                       "n_in_region": 0, "fraction": 0.0, "status": "skipped",
@@ -280,7 +281,7 @@ def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
                 break
             rid = ledger.ensure_rule(p.get("rule_id"), probes_mod.rule_text(p, spec))
             E("status", text=f"Probing {rid}: {probes_mod.describe(p)}"[:200])
-            res = probes_mod.run_probe(p, rid, bb, spec, X)
+            res = probes_mod.run_probe(p, rid, bb, spec, X, cex)
             b = res.pop("batch")
             store.save_queries(run_id, b)
             batches.append(b)
@@ -288,7 +289,7 @@ def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
             y += b.actions
             rows += [(b.query_id, o, a, "probe") for o, a in zip(b.obs, b.actions)]
             conf = res["fraction"] if res["n_in_region"] else ledger.get(rid).confidence
-            ledger.verdict(rid, res["status"], conf, b.query_id)
+            ledger.verdict(rid, res["status"], conf, b.query_id, extra_evidence=res["base_evidence"])
             probe_results.append(res)
         if probe_results:
             E("ledger", entries=ledger.snapshot())
