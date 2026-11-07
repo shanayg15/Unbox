@@ -8,7 +8,7 @@ Each person runs **two Claude Code sessions at once** in the same repo folder, e
 |---|---|---|---|
 | A | **A-World** | `blackbox/`, `tests/test_a_world*.py` | A1 → A2 → A3, then demo-seed finder |
 | A | **A-Proof** | `numerics/`, `scripts/batch.py`, `tests/test_a_proof*.py` | A4 → A5, then A6 after merge |
-| B | **B-Brain** | `agent/`, `store/`, `contracts/mocks.py`, `scripts/smoke.py`, `tests/test_b_brain*.py` | B1 → B2 → B3 → B4 |
+| B | **B-Brain** | `agent/`, `store/`, `contracts/mocks.py`, `scripts/smoke.py`, `tests/test_b_brain*.py` | B1 → B2 → B2b (SubQ Snap) → B3 → B4 |
 | B | **B-Show** | `app/`, `fixtures/`, `scripts/make_fixture.py`, `README.md`, `tests/test_b_show*.py` | fixture → B5 → B6, then B7 after merge |
 
 Nobody edits `contracts/types.py`, `contracts/numerics_api.py` or `contracts/events.py` without telling the other person.
@@ -74,7 +74,7 @@ Read CLAUDE.md and LANES.md. You are session A-Proof. Only edit numerics/, scrip
 
 **B-Brain**
 ```
-Read CLAUDE.md and LANES.md. You are session B-Brain. Only edit agent/, store/, contracts/mocks.py, scripts/smoke.py and tests/test_b_brain*.py. Never run git commands; the human syncs. Build CLAUDE.md tasks B1, B2, B3, B4 in order with USE_MOCKS=1, following the B-Brain notes in LANES.md section 4. Implement agent.loop.run and agent.fixer.fix with the exact signatures in LANES.md section 2. After each task, run its "Done when" check and show me the output, then continue without waiting unless blocked.
+Read CLAUDE.md and LANES.md. You are session B-Brain. Only edit agent/, store/, contracts/mocks.py, scripts/smoke.py and tests/test_b_brain*.py. Never run git commands; the human syncs. Build CLAUDE.md tasks B1, B2, B2b, B3, B4 in order with USE_MOCKS=1, following the B-Brain notes in LANES.md section 4. Implement agent.loop.run and agent.fixer.fix with the exact signatures in LANES.md section 2. After each task, run its "Done when" check and show me the output, then continue without waiting unless blocked.
 ```
 
 **B-Show**
@@ -126,6 +126,8 @@ Read CLAUDE.md and LANES.md. You are session B-Show. Only edit app/, fixtures/, 
 - **Compact context:** round floats to 3 decimals, cap tables (≤ 12 counterexamples, ≤ 20 probe rows), fixed-width columns. `CONTEXT_MODE=full` appends all query batches as CSV.
 - **Program versions:** `changed_lines` via `difflib` against the previous version's code.
 - **Frames:** emit a `frames` event only when a new program version improves holdout agreement (keeps payloads down).
+- **SubQ Snap is NOT a chat model.** It's the Decisions API (`POST /v1/systemone`, model `subq-snap-1.1`): named yes/no and choice questions → probabilities, up to 384K input tokens, no text output. Build it as `agent/snap.py` per CLAUDE.md B2b, with `httpx` (not the OpenAI client). `questions` is an **object keyed by name**; `"type"` is `"noul"` (yes/no) or `"choice"` (`criteria` = map option → description or null). Test with `python -m agent.snap --ping` before wiring it into the loop.
+- **Add the `snap` event** to `contracts/events.py` (shared file: it's a one-line addition; tell the human so Person A knows).
 - **Mock path must be fast:** with USE_MOCKS=1 and a real brain, a run should finish in < 2 min. That's what B-Show and integration rely on.
 - **Store:** JsonStore first (works offline). MongoStore only after B3 passes, ≤ 15 min, auto-fallback to JSON (CLAUDE.md B4).
 
@@ -140,6 +142,7 @@ Read CLAUDE.md and LANES.md. You are session B-Show. Only edit app/, fixtures/, 
 - **Code panel:** use `changed_lines` from the event; glow those lines for 3 s.
 - **Curve:** SVG `<polyline>` in a fixed viewBox, axes 0–100% and 0–budget.
 - **Projector check:** 1920×1080, no scrollbars, ledger ≥ 18 px, code ≥ 16 px, high-contrast dark theme. Footer credit line from CLAUDE.md B6.
+- **SubQ panel:** render `snap` events per CLAUDE.md B6 (strip under the ledger header, per-feature relevance bars, `SubQ p=` chip on each ledger row). Add `snap` events to the fixture (one per turn, with the anomaly feature's probability rising across turns).
 - **Live fallback banner:** "Live run exceeded time limit, replaying cached run of this exact configuration." Never silent.
 
 ---
@@ -151,9 +154,9 @@ Read CLAUDE.md and LANES.md. You are session B-Show. Only edit app/, fixtures/, 
 | 11:30–11:45 | Skeleton pushed. Both: clone, `.venv`, `.env`, **claim Meta credits**, start all 4 sessions | | | |
 | 11:45–1:15 | A1→A3, demo seed | A4→A5 | B1→B4 | fixture→B5→B6 |
 | **1:15–1:45** | **Integration** (both people together, section 6) | | | |
-| 1:45–2:30 | Tune LunarLander twists + demo seed | A6 batch: start runs for both brains in background | Live-path speed (≤ 75 s on bb-05) | B7: fix + shield + results tab |
+| 1:45–2:30 | Tune LunarLander twists + demo seed | A6 batch: start SNAP=1 and SNAP=0 runs in background | Live-path speed (≤ 75 s on bb-05) | B7: fix + shield + results tab |
 | **2:30** | **Feature freeze.** Only bug fixes and demo polish after this. | | | |
-| 2:30–3:15 | Demo polish (section 7) | Fill cache for every policy × flaw (Muse + SubQ) | README + results | UI final pass on the projector |
+| 2:30–3:15 | Demo polish (section 7) | Fill cache for every policy × flaw (SNAP=1) | README + results | UI final pass on the projector |
 | 3:15–3:45 | Record backup run of the full demo; record 1-min video footage | | | |
 | 3:45–4:15 | Voiceover, edit, upload; submit (repo public, link in incognito, both teammates) | | | |
 | 4:15–5:00 | Rehearse the 3-minute pitch at least 5 times with a timer; drill Q&A | | | |
@@ -169,7 +172,7 @@ Read CLAUDE.md and LANES.md. You are session B-Show. Only edit app/, fixtures/, 
 3. `USE_MOCKS=0 python -m scripts.smoke` → all green.
 4. Headless: `python -m agent.loop --bb bb-01 --env CartPole-v1 --brain muse` with t-cp-1 set via the UI or admin endpoint. Twist rule should show up confirmed.
 5. UI: pick bb-01 + Hidden flaw, Run, watch every panel move. Reveal → Fix → Shield.
-6. Same headless run with `--brain subq`.
+6. `snap` events show in the UI; same headless run with `SNAP=0` works (ablation path).
 7. `pytest -q` all green. `./sync.sh "integrated"`.
 
 **Demo machine decision:** run **everything on one laptop** for the demo (both servers local). Fewer network hops, no venue Wi-Fi between your two processes.
@@ -180,8 +183,8 @@ Read CLAUDE.md and LANES.md. You are session B-Show. Only edit app/, fixtures/, 
 
 - [ ] Hero config locked: bb-05 (LunarLander-PPO), t-ll-1, demo seed from the finder. Clean lands, twisted crashes on the right side. Clone reproduces the crash (that's the proof). Shield lands it.
 - [ ] Live run on the hero config finishes in ≤ 60 s, 3 times in a row. If not, lower turns/queries until it does.
-- [ ] Cache exists for every policy × flaw the judge can pick, for Muse (and SubQ for the results tab). Fallback banner tested.
-- [ ] Results tab shows both brains, cross-match, zero-query baseline, one honest failure.
+- [ ] Cache exists for every policy × flaw the judge can pick (SNAP=1). Fallback banner tested.
+- [ ] Results tab shows with-vs-without SubQ (queries/turns to find the twist), cross-match, zero-query baseline, one honest failure.
 - [ ] Browser full-screen, zoom set for the projector, notifications off, laptop on power, Wi-Fi dependency known (the brain API is the only network call).
 - [ ] Backup recording of the full live demo saved locally, one click away.
 - [ ] Pitch rehearsed 5×, under 3:00, every placeholder filled with real numbers.

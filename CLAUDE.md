@@ -66,7 +66,7 @@ pytest
 
 `.env.example`
 ```
-# Brain: muse (live demo default) | subq
+# Brain (writes code): muse
 BRAIN=muse
 
 # Meta Model API (OpenAI-compatible)
@@ -74,10 +74,11 @@ MODEL_API_KEY=
 META_BASE_URL=https://api.meta.ai/v1
 META_MODEL=muse-spark-1.1          # run GET /v1/models and use the newest Muse Spark id
 
-# SubQ API (OpenAI-compatible; base URL + model id from console.subq.ai)
+# SubQ Snap: Decisions API (NOT chat). POST {SUBQ_BASE_URL}/systemone. Evidence scanner, see section 7 B2b.
 SUBQ_API_KEY=
-SUBQ_BASE_URL=
-SUBQ_MODEL=
+SUBQ_BASE_URL=https://api.subq.ai/v1
+SUBQ_MODEL=subq-snap-1.1
+SNAP=1                             # 1 = run the SubQ evidence scan each turn; 0 = ablation (batch only)
 
 # Black-box server
 BLACKBOX_URL=http://localhost:8001
@@ -102,7 +103,7 @@ uvicorn blackbox.server:app --port 8001          # Lane A
 uvicorn app.server:app --port 8000               # Lane B → open http://localhost:8000
 python -m scripts.smoke                          # checks keys, black box, numerics
 python -m agent.loop --bb bb-01 --twist t-cp-1 --brain muse   # headless run
-python -m scripts.batch --brains muse,subq       # A6: precompute results + caches
+python -m scripts.batch --snap 1,0               # A6: precompute results + caches, with/without SubQ
 pytest -q
 ```
 
@@ -157,7 +158,7 @@ The full timeline is in LANES.md section 5. Key checkpoints:
 ```
 11:45–1:15   Four sessions in parallel (A-World, A-Proof, B-Brain, B-Show), Lane B on mocks
 1:15–1:45    INTEGRATION: one fresh Integrator session on the demo laptop, USE_MOCKS=0, CartPole end to end
-1:45–2:30    A6 batch (both brains) · B7 fix + shield + results tab · LunarLander live path ≤ 75 s
+1:45–2:30    A6 batch (SubQ on/off ablation) · B7 fix + shield + results tab · LunarLander live path ≤ 75 s
 2:30         FEATURE FREEZE (bug fixes and demo polish only after this)
 2:30–4:15    Cache every combo, README, backup recording, 1-min video, submit
 4:15–5:00    Rehearse the pitch
@@ -316,6 +317,7 @@ EVENT_TYPES = {
     "shield":       "{on: bool, bb: [b64] | null}            # shielded black-box clip when on",
     "run_finished": "{eval: EvalReport as dict, total_queries, turns, seconds, cached: bool}",
     "error":        "{message}",
+    "snap":         "{turn, n_rows, input_tokens, feature_relevance: {feature: p}, anomaly_feature: {choice, probabilities, confidence}, next_probe: {choice, probabilities, confidence}, rule_support: {rule_id: p}}",
 }
 ```
 
@@ -416,7 +418,7 @@ Load bb-02…bb-06, frames via `env.render()` (`render_mode="rgb_array"`), downs
 **Done when:** against bb-01 with t-cp-1 active and a program fit only on clean behavior, ≥ 80% of returned counterexamples satisfy the twist condition (`cart_v > threshold`). `evaluate` returns a full `EvalReport` in < 20 s for 20 seeds.
 
 ### A6 (after merge). Batch, cross-match, baselines → `scripts/batch.py`
-For every bb id × {no twist, each twist} × brain in `--brains`:
+For every bb id × {no twist, each twist} × `SNAP` in {1, 0} (Muse brain), add to each row `snap: bool`, `queries_to_twist`, `turns_to_twist` (first time the twist rule is confirmed; null if never):
 - run `agent.loop.run(..., live=False)` headless, save the run, copy demo-relevant runs to `cache/<bb>__<twist>__<brain>/`.
 - **Cross-match:** evaluate each recovered program against the other policy of the same env (bb-01 vs bb-02, bb-05 vs bb-06). Expect diagonal high, off-diagonal lower.
 - **Zero-query baseline:** brain gets the task name + sensor spec and no queries (`prompts.ZERO_QUERY`), write a controller; evaluate it. Expect decent reward, low agreement.
@@ -437,14 +439,33 @@ For every bb id × {no twist, each twist} × brain in `--brains`:
 
 **Done when:** `USE_MOCKS=1 python -m scripts.smoke` is all green except whichever API key is missing.
 
-### B2. Brain clients (both providers, one codebase)
+### B2. Brain client (Muse writes the code)
 `agent/brain.py`:
-- `Brain(provider)` with provider in `{"muse", "subq"}` → `openai.OpenAI(base_url=..., api_key=...)` from `.env`; model from `META_MODEL` / `SUBQ_MODEL`.
+- `Brain("muse")` → `openai.OpenAI(base_url=META_BASE_URL, api_key=MODEL_API_KEY)`; model `META_MODEL`.
 - `turn(messages) -> dict`: chat completions; extract JSON (raw object, or a ```json fence, or the first balanced `{...}`); validate with `protocol.BrainTurn`; on failure, retry up to 2× appending the validation error. Don't depend on `response_format` support; try it, fall back silently.
-- Log every call (rule 5).
-- `python -m agent.brain --ping --brain muse|subq` sends a toy turn and prints the parsed JSON.
+- Retry 429/5xx with backoff (1 s, 2 s, 4 s). Log every call (rule 5).
+- `python -m agent.brain --ping` sends a toy turn and prints the parsed JSON.
+- (Optional, only if the SubQ booth enables `subq-preview` chat for our key: a second provider `"subq_chat"` with the same client code. Not on the critical path.)
 
-**Done when:** the ping works for both `muse` and `subq` and both appear in `brain_calls.jsonl`.
+**Done when:** the Muse ping works and appears in `brain_calls.jsonl`.
+
+### B2b. SubQ Snap evidence scan (`agent/snap.py`)
+SubQ Snap 1.1 is a **decision model**, not a chat model: it answers named yes/no, choice and score questions with calibrated probabilities over up to **384K tokens** of input, and generates no text. Unbox uses it as the **evidence scanner**: every turn it reads the *entire raw query log* (no summarizing) and tells Muse where to look.
+
+API: `POST {SUBQ_BASE_URL}/systemone`, `Authorization: Bearer {SUBQ_API_KEY}`, body `{"model": SUBQ_MODEL, "state": <text>, "questions": {name: question}}`. Question types: `"noul"` (yes/no → `answers[name].noul` = P(yes)), `"choice"` (`criteria` = map of option → description or null → `answers[name].choice`, `.probabilities`, `.confidence`). Max 128 questions per call. Errors: 400 over token limit, 402 out of credits, 422 bad request, 429 rate limit. Docs: https://docs.subq.ai/endpoints/decisions-api/
+
+`scan(spec, rows, counterexamples, ledger, run_id) -> dict`:
+- **state** (text): sensor spec, then every query row as one line `q12 | x=0.312 y=1.020 ... -> fire_main` (all sources, 3 decimals), then counterexamples labeled `[C1]..[Ck]`, then active ledger rules labeled `[r1]..`. Keep under ~1.2M characters (≈ 300K tokens); if over, drop the oldest rollout rows first and record `n_rows` actually sent.
+- **questions:**
+  - `rel_<feature>` (noul), one per obs feature: "Across all rows, does the robot's action depend on <feature>, i.e. do states that differ mainly in <feature> get different actions?"
+  - `anomaly_feature` (choice over feature names + `none`): "Which feature best separates the counterexamples [C*] from the other rows?"
+  - `next_probe` (choice over feature names): "Probing which feature next is most likely to reveal behavior the current rules do not explain?"
+  - `rule_<rid>` (noul), one per non-refuted ledger rule: "Is this rule consistent with all rows: <rule text>?"
+- Return `{feature_relevance, anomaly_feature, next_probe, rule_support, n_rows, input_tokens}`; emit a `snap` event; log the call to `brain_calls.jsonl` with `provider="subq"`, `model`, `input_tokens`.
+- **Advisory only (rule 4):** Snap probabilities are shown and fed to Muse, but `confirmed`/`refuted` still come only from Python probe verdicts.
+- Timeout 20 s; on any error, log it, emit `status` "SubQ scan skipped", and continue the turn without it. Never block the loop.
+
+**Done when:** `python -m agent.snap --ping` sends a 2-question request and prints the answers, and on the mock run the `snap` event shows `cart_v` (the t-cp-1 twist feature) as `anomaly_feature` with the highest probability at least once.
 
 ### B3. Protocol, prompts, probes, ledger, loop (on mocks)
 `agent/protocol.py` (pydantic):
@@ -519,11 +540,12 @@ CURRENT PROGRAM (v{version}, holdout agreement {agreement:.1%}, fitted params {p
 {code}
 LEDGER: {ledger_table}
 PATTERN HINTS (decision tree on {n} labeled states): {hints}
+SUBQ EVIDENCE SCAN (SubQ Snap read all {n_rows} raw rows): feature relevance {relevance}; counterexamples best separated by {anomaly_feature} (p={p}); suggested next probe: {next_probe}; rule support {rule_support}
 PROBE RESULTS since last turn: {probe_table}
 COUNTEREXAMPLES (clone disagrees with robot): {counterexample_table}
 LAST ERROR (if any): {error}
 ```
-In `CONTEXT_MODE=full`, also append every query batch as CSV (all raw evidence). Use this for SubQ runs to showcase long context.
+`CONTEXT_MODE=full` also appends every query batch as CSV to the Muse prompt (rarely needed now that SubQ Snap reads the full raw log).
 
 FIX (after reveal):
 ```
@@ -539,7 +561,8 @@ ZERO_QUERY (baseline only, used by A6): task name + sensor spec, "write a contro
 1. spec = bb.spec(); rollouts on seeds 0..7 (source=rollout); holdout on seeds 100..107 (source=holdout)
 2. hints = pattern_hints(rollout data)
 3. for turn in 1..max_turns:
-     out = brain.turn(context)                      → emit status(out.summary)
+     if SNAP=1: scan = snap.scan(...)               → emit snap   (skip silently on error)
+     out = brain.turn(context incl. scan)           → emit status(out.summary)
      apply ledger updates                            → emit ledger
      if out.program: fn = load_program(...)          (ProgramError → feed back next turn)
                      params, _ = fit_params(...)     on all non-holdout data
@@ -608,8 +631,9 @@ body   { display:grid; grid-template-columns:1fr 1fr; height:100vh; margin:0; }
 - Code panel: monospace ≥ 16 px; diff against the previous version and glow changed lines for 3 s.
 - Curve: plain SVG polyline of `metric` events (queries on x, agreement on y, 0–100%).
 - Status line under the controls shows the latest `status.text`.
+- **SubQ panel (from `snap` events):** a one-line strip under the ledger header: "SubQ Snap read 4,812 raw rows (212K tokens) · anomaly most likely in **x** (p 0.91) · probe next: **x**", plus a small horizontal bar per feature for `feature_relevance`. Each ledger row shows a small `SubQ p=0.88` chip from `rule_support`, visually distinct from the Python-verdict icon.
 - Reveal swaps the flaw dropdown text to the reveal label. Shield toggles the black-box clip to the shielded clip and relabels the panel "BLACK BOX + SHIELD (fixed rule)".
-- Results tab: table from `/api/results` (incl. a column per brain), cross-match matrix, baseline row, and one honest failure row.
+- Results tab: table from `/api/results` with a **with SubQ vs without SubQ** comparison (queries and turns to find the twist), cross-match matrix, baseline row, and one honest failure row.
 - Sizing: works at 1920×1080 with no scrolling; ledger ≥ 18 px.
 
 **Done when:** replaying a mock run shows every panel moving correctly; the screenshot at 1920×1080 has no scrollbars.
@@ -623,7 +647,7 @@ body   { display:grid; grid-template-columns:1fr 1fr; height:100vh; margin:0; }
 
 1. `USE_MOCKS=0`, start both servers, `python -m scripts.smoke` all green.
 2. From the UI: bb-01 + t-cp-1 + Muse → run finishes; twist found in the ledger.
-3. Same with `--brain subq` headless; both show up in `brain_calls.jsonl`.
+3. `snap` events appear in that run and SubQ calls show up in `brain_calls.jsonl`; repeat headless with `SNAP=0` to confirm the ablation path works.
 4. `pytest -q` passes, including `test_isolation.py`.
 5. Then tune the **live path** on bb-05 (LunarLander) so a live run finishes in ≤ `LIVE_TIMEOUT_S`: lower `LIVE_MAX_TURNS`, fit `max_seconds`, prober `max_queries`.
 
@@ -634,10 +658,10 @@ body   { display:grid; grid-template-columns:1fr 1fr; height:100vh; margin:0; }
 | Sponsor | Where | Evidence for judges |
 |---|---|---|
 | **Meta Model API (Muse Spark)** | `BRAIN=muse`: proposes program structure, designs probes, revises from counterexamples, writes ledger + fixes. **Default brain for the live demo.** | Live run + `brain_calls.jsonl` + results-tab column |
-| **SubQ** | `BRAIN=subq`: same job, swapped by flag; run with `CONTEXT_MODE=full` to feed every raw query batch (long context, no summarizing) | Batch runs logged under `runs/` + results-tab column |
+| **SubQ Snap 1.1** (Decisions API) | Evidence scanner every turn: reads the **entire raw query log** (up to 384K tokens, no summarizing) and returns calibrated probabilities for which features matter, where the anomaly is, what to probe next, and how well each rule fits. Steers Muse. | `snap` panel live in the UI + ablation in results: queries/turns to find the twist **with vs without SubQ** (`SNAP=1` vs `SNAP=0`) |
 | **MongoDB Atlas** (optional) | `STORE=mongo`: queries, ledger, program versions, evals | Collections populated by a demo run |
 
-Both brains use the same agent code; only the client config differs. Pitch with whichever has the stronger numbers in `results/summary.json`; show both columns in the results tab.
+Division of labor: **SubQ Snap reads everything and decides where to look; Muse writes and revises the code; Python decides what's true.** The SubQ ablation (same runs with `SNAP=0`) is the headline evidence for the SubQ prize.
 
 Prizes this maps to: Overall · Best Use of Meta Model API ($5K) · Best Use of Subquadratic ($5K 1st / $1K 2nd). There is no separate MongoDB prize; Atlas is optional.
 
