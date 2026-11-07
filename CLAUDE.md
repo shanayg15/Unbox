@@ -8,17 +8,14 @@ Hackathon: AIE Code Summit, Sat Nov 7 2026. Track: **Software Archaeology**. Sub
 
 ## 0. How to use this file
 
-- Put this file at the repo root as `CLAUDE.md`. Claude Code reads it automatically.
-- Two people, two lanes. Each person starts Claude Code with:
-  - **Person A:** "Read CLAUDE.md. I'm Person A. Build Lane A tasks in order (A1→A5). Only edit `blackbox/`, `numerics/`, `tests/test_a_*.py`. Don't change `contracts/` without asking me."
-  - **Person B:** "Read CLAUDE.md. I'm Person B. Build Lane B tasks in order (B1→B6). Only edit `agent/`, `store/`, `app/`, `contracts/mocks.py`, `scripts/smoke.py`, `tests/test_b_*.py`. Don't change other `contracts/` files without asking me."
-- Every task has a **Done when** check. Don't start the next task until it passes. Commit after every task (`git commit -m "A2: twists + admin"`).
-- The lanes only touch through `contracts/` (section 5). Lane B runs on mocks until the merge. Lane A never needs Lane B's code until A6.
+- This file is the build spec. `LANES.md` (next to it) says who builds what, in four parallel Claude Code sessions: **A-World, A-Proof** (Person A) and **B-Brain, B-Show** (Person B). Each session's prompt and owned folders are in LANES.md section 3; stay inside your owned folders.
+- Every task has a **Done when** check. Run it and show the output before moving to the next task.
+- Sessions only touch through `contracts/` (section 5) and the internal contracts in LANES.md section 2. Lane B runs on mocks until integration. Lane A never needs Lane B's code until A6.
 
-**Git workflow (keep it simple):**
-- Everyone works on `main`. Lanes own separate folders, so conflicts are rare.
-- Before every push: `git pull --rebase origin main`, then `pytest -q tests/test_isolation.py`, then push.
-- Shared files (`requirements.txt`, `README.md`, `.env.example`, `contracts/`): add lines, never rewrite; say in the commit message when you touch one.
+**Git workflow:**
+- Claude sessions never run git commands. The human runs `./sync.sh "message"` (LANES.md section 1).
+- Everyone works on `main`. Sessions own separate folders, so conflicts are rare.
+- Shared files (`requirements.txt`, `.env.example`, `contracts/`): add lines, never rewrite; tell the human when you touch one.
 - Never commit `.env`. Never force-push.
 
 ---
@@ -41,7 +38,7 @@ Hackathon: AIE Code Summit, Sat Nov 7 2026. Track: **Software Archaeology**. Sub
 ## 2. Setup
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
+python3.11 -m venv .venv && source .venv/bin/activate    # use 3.11 on both Macs (brew install python@3.11)
 pip install swig            # Box2D (LunarLander) needs swig before box2d builds
 pip install -r requirements.txt
 cp .env.example .env        # fill in keys
@@ -132,15 +129,18 @@ unbox/
     sandbox.py  fit.py  prober.py  evaluate.py  patterns.py  shield.py
     __init__.py             # re-exports everything in contracts/numerics_api.py
   agent/                    # B
-    brain.py  prompts.py  protocol.py  probes.py  ledger.py  loop.py
+    brain.py  prompts.py  protocol.py  probes.py  ledger.py  loop.py  fixer.py
   store/                    # B
     store.py                # json + mongo backends, same interface
   app/                      # B
     server.py               # FastAPI :8000, REST + WebSocket, serves static/
     static/index.html  static/app.js  static/style.css
   scripts/
-    smoke.py                # B
-    batch.py                # A (after merge)
+    smoke.py                # B-Brain
+    batch.py                # A-Proof (after merge)
+    make_fixture.py         # B-Show
+  fixtures/                 # B-Show: fake event streams for building the UI
+  sync.sh                   # human-only git sync (LANES.md section 1)
   runs/                     # per-run logs (gitignored except demo runs)
   cache/                    # precomputed runs for the live-demo fallback
   results/                  # batch outputs for the results tab
@@ -153,18 +153,14 @@ unbox/
 
 ## 4. Build order and the merge point
 
+The full timeline is in LANES.md section 5. Key checkpoints:
 ```
-11:15–11:30  Whoever is first: copy section 5 into contracts/, add test_isolation.py, push.
-             Both: install, keys work (Meta + SubQ ping), claim Meta credits NOW (closes 3:00).
-11:30–1:15   Lane A: A1→A5        |  Lane B: B1→B6 (on mocks)
-1:15–1:45    INTEGRATION (both): USE_MOCKS=0, CartPole bb-01 end to end from the UI
-1:45–2:45    A: A6 batch (both brains, cross-match, baselines)  |  B: B7 fix + shield + results tab
-             Both: LunarLander live path tuned to finish in ≤ 75 s
-2:45–3:30    Precompute cache for every policy×flaw combo; README; demo polish
-3:30–3:45    FEATURE FREEZE
-3:45–4:30    Backup recording + 1-min video
-4:30–4:45    Submit (repo public, video link works in incognito, both teammates added)
-4:45–5:00    Rehearse pitch with a timer
+11:45–1:15   Four sessions in parallel (A-World, A-Proof, B-Brain, B-Show), Lane B on mocks
+1:15–1:45    INTEGRATION: one fresh Integrator session on the demo laptop, USE_MOCKS=0, CartPole end to end
+1:45–2:30    A6 batch (both brains) · B7 fix + shield + results tab · LunarLander live path ≤ 75 s
+2:30         FEATURE FREEZE (bug fixes and demo polish only after this)
+2:30–4:15    Cache every combo, README, backup recording, 1-min video, submit
+4:15–5:00    Rehearse the pitch
 ```
 
 **Cut rule:** if CartPole isn't end to end by 1:45, drop Acrobot/MountainCar and all stretch work; make CartPole + LunarLander great.
@@ -538,7 +534,7 @@ Change as few lines as possible. Every other behavior must stay identical.
 
 ZERO_QUERY (baseline only, used by A6): task name + sensor spec, "write a controller that performs this task well", same program rules.
 
-`agent/loop.py` `run(bb_id, twist_label_hidden, brain, budget, max_turns, live, emit, store) -> RunResult`:
+`agent/loop.py` `run(...)`: exact signature in LANES.md section 2 (the app passes in `bb`, `env_factory` and `numerics`; the agent never builds envs or learns the env id). Steps:
 ```
 1. spec = bb.spec(); rollouts on seeds 0..7 (source=rollout); holdout on seeds 100..107 (source=holdout)
 2. hints = pattern_hints(rollout data)
@@ -556,6 +552,8 @@ ZERO_QUERY (baseline only, used by A6): task name + sensor spec, "write a contro
 4. report = evaluate(...)                            → emit run_finished
 ```
 `render_pair`: black-box clip from `bb.episode(demo_seed, render=True)` (cached); clone clip from a local env with the same seed driven by the program; `disagree[t] = fn(bb_obs[t]) != bb_action[t]` on the black box's trajectory.
+
+`agent/fixer.py` `fix(...)`: FIX prompt wrapper, signature in LANES.md section 2.
 
 **Done when:** `USE_MOCKS=1 python -m agent.loop --bb mock --brain muse` finishes in ≤ 6 turns, the final program has ≥ 0.9 agreement on the mock, the ledger has at least one refuted and one confirmed rule, and `runs/<id>/events.jsonl` validates against `contracts/events.py`.
 
