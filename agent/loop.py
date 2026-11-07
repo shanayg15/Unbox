@@ -214,12 +214,14 @@ def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
 
     # 3. turns -------------------------------------------------------------------
     longest_turn_s, turn_t0 = 0.0, None
+    stopped_for_time = False
     for turn in range(1, max_turns + 1):
         if turn_t0 is not None:
             longest_turn_s = max(longest_turn_s, time.time() - turn_t0)
         # live: don't start a turn that can't finish before the time limit (the app gives up then)
         if over_time() or (timeout_s is not None and time.time() - t0 + longest_turn_s > timeout_s):
             E("status", text="Live time limit reached")
+            stopped_for_time = True
             break
         turn_t0 = time.time()
         turns_done = turn
@@ -359,9 +361,11 @@ def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
             break
 
     # 4. final evaluation --------------------------------------------------------
-    if best is None and live and over_time():
-        # nothing recovered inside the live time limit: let the app switch to the cached run
-        raise TimeoutError("live time limit reached before a program was recovered")
+    if live and timeout_s is not None and (stopped_for_time or over_time()) and (
+            best is None or best[0] < TARGET_AGREEMENT):
+        # the live time limit stopped the run before the copy converged: let the app switch to
+        # the cached run of this exact configuration (it says so on screen)
+        raise TimeoutError("live time limit reached before the copy converged")
     if best is None:
         fn_final = numerics.load_program(FALLBACK_CODE, spec)
         best = (0.0, 0, FALLBACK_CODE, {}, fn_final)

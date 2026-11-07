@@ -56,9 +56,9 @@ CACHE_DIR = ROOT / "cache"
 RESULTS_DIR = ROOT / "results"
 DEFAULT_FIXTURE = "demo_events"
 
-FALLBACK_TIMEOUT_TEXT = ("Live run went past the time limit. Showing our earlier run of this exact "
-                         "configuration.")
-FALLBACK_REPLAY_MAX_S = 30.0       # a cached fallback replays in at most this many seconds
+FALLBACK_TIMEOUT_TEXT = ("The live run could not finish within the time limit. Showing our earlier "
+                         "run of this exact configuration.")
+FALLBACK_REPLAY_MAX_S = 20.0       # a cached fallback replays in at most this many seconds
 
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]{0,127}$")
 

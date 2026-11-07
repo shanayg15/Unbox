@@ -5,7 +5,8 @@
 const $ = (id) => document.getElementById(id);
 const GLOW_MS = 3000;
 const PLAY_FPS_MAX = 10;                 // clips play once, at most this fast, then hold the last frame
-const HIDE_FROM_MENU = new Set(["t-mc-1"]); // not reliably found (kept in Results as the honest failure)
+const HIDE_FROM_MENU = new Set([]);           // flaws not reliably found go here (they stay in Results)
+const SHOWN_ENVS = new Set(["CartPole", "MountainCar"]);   // robots this demo covers
 
 const ROBOTS = {
   CartPole: "balances a pole on a moving cart",
@@ -623,7 +624,8 @@ async function loadResults() {
   try { j = await (await fetch("/api/results")).json(); } catch (e) { box.innerHTML = `<div class="muted">Could not load results: ${esc(e.message)}</div>`; return; }
   if (!j.available) { box.innerHTML = '<div class="muted">No batch results yet (python -m scripts.batch --snap 1,0).</div>'; return; }
   const R = j.results;
-  const rows = (R.summary && R.summary.rows) || [];
+  const shownBB = new Set(POLICIES.map((p) => p.bb));
+  const rows = ((R.summary && R.summary.rows) || []).filter((r) => shownBB.has(r.bb));
   const flawRows = rows.filter((r) => r.twist && r.twist !== "none");
   const on = rows.filter((r) => r.snap === true), off = rows.filter((r) => r.snap === false);
   const flawOn = flawRows.filter((r) => r.snap === true), flawOff = flawRows.filter((r) => r.snap === false);
@@ -639,13 +641,15 @@ async function loadResults() {
   const cut = totOff ? 1 - totOn / totOff : null;
 
   // cross-match
-  const cm = R.crossmatch || {};
+  const cm = Object.fromEntries(Object.entries(R.crossmatch || {})
+    .filter(([prog]) => shownBB.has(prog.replace(/ program$/, "")))
+    .map(([prog, cols]) => [prog, Object.fromEntries(Object.entries(cols || {}).filter(([bb]) => shownBB.has(bb)))]));
   const diag = [], offd = [];
   Object.entries(cm).forEach(([prog, cols]) => {
     const own = prog.replace(/ program$/, "");
     Object.entries(cols || {}).forEach(([pol, v]) => (pol === own ? diag : offd).push(v));
   });
-  const base = (R.baselines && R.baselines.rows) || [];
+  const base = ((R.baselines && R.baselines.rows) || []).filter((r) => shownBB.has(r.bb));
 
   const keys = [];
   keys.push([`${flawOn.filter((r) => r.twist_found).length} of ${flawOn.length}`, `planted flaws found with SubQ (${flawOff.filter((r) => r.twist_found).length} of ${flawOff.length} without)`]);
@@ -716,6 +720,7 @@ async function loadBackups() {
     const items = (j.cache || []).map((k) => {
       const c = parseCacheKey(k);
       if (c.twist_id && HIDE_FROM_MENU.has(c.twist_id)) return null;
+      if (!POLICIES.some((p) => p.bb === c.bb)) return null;
       return `<button class="linkbtn" data-key="${esc(k)}">${esc(robotName(policyOf(c.bb)))} · ${c.twist_id ? `planted flaw ${flawNum(c.twist_id)}` : "no planted flaw"}</button>`;
     }).filter(Boolean);
     $("backupList").innerHTML = items.join("") || '<div class="muted small">No cached runs.</div>';
@@ -740,7 +745,7 @@ async function boot() {
   }));
   try {
     const [cfg, pol] = await Promise.all([getJSON("/api/config"), getJSON("/api/policies")]);
-    POLICIES = pol.policies || [];
+    POLICIES = (pol.policies || []).filter((p) => SHOWN_ENVS.has(envFamily(p.env_id)));
     $("selPolicy").innerHTML = POLICIES.map((p) => `<option value="${esc(p.bb)}">${esc(robotName(p))}</option>`).join("");
     if (POLICIES.some((p) => p.bb === "bb-01")) $("selPolicy").value = "bb-01";
     if (pol.warning) setStatus(pol.warning, true);

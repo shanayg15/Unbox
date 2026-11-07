@@ -495,7 +495,9 @@ def _guard_check(bridge, spec, queries, failing: dict | None, prog: dict, fix: d
 def _cost(bridge, prog: dict, fix: dict) -> dict | None:
     """Robot vs guarded robot on the same seeds. Live bridges only; computed once in the background."""
     ctx = bridge.ctx
-    if bridge.kind != "live" or bridge.superseded or ctx.get("bb") is None or not ctx.get("env_id"):
+    # replays and fallbacks set the same robot + flaw on the live black box (app.server), so the
+    # measurement is just as real there; only a bridge without a black box is skipped
+    if ctx.get("bb") is None or not ctx.get("env_id"):
         return None
     with _LOCK:
         if "report_cost" in ctx:

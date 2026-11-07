@@ -80,7 +80,8 @@ def test_fallback_banner_is_never_silent():
     import app.server as server
 
     assert server.FALLBACK_TIMEOUT_TEXT == (
-        "Live run went past the time limit. Showing our earlier run of this exact configuration.")
+        "The live run could not finish within the time limit. Showing our earlier run of this exact "
+        "configuration.")
     assert "d.banner" in JS and "showBanner" in JS
 
 
