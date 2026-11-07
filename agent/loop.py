@@ -1,12 +1,13 @@
 """Lane B, task B3: agent loop"""
 
 
-class RunResult:
-    def __init__(self, *args, **kwargs) -> None:
-        raise NotImplementedError
-
-
-def run(bb_id, twist_label_hidden, brain, budget, max_turns, live, emit, store) -> RunResult:
+def run(bb, brain: str, *, env_factory, numerics, emit, store, run_id: str,
+        budget: int, max_turns: int, live: bool, timeout_s: float | None,
+        policy_label: str, demo_seed: int = 0) -> dict:
+    """bb: contracts.types.BlackBox. env_factory(seed) -> (env, first_obs).
+    numerics: module with the contracts/numerics_api.py functions (real or stub).
+    emit(event_dict) is called from this thread; must be thread-safe on the caller side.
+    Returns {"program": Program, "ledger": [LedgerEntry], "eval": EvalReport, "events_path": str}."""
     raise NotImplementedError
 
 
