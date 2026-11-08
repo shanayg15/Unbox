@@ -2,7 +2,7 @@
 
 Unbox watches a robot's neural network through an API and writes short, readable Python that makes the same decisions. It proves each rule with experiments, finds the rule behind a failure, fixes it, and applies the fix to the deployed network as a runtime guard. The network's weights are never changed.
 
-Robots in this demo: **CartPole** (PPO and DQN; balance a pole on a moving cart; start state #152) and **MountainCar** (DQN; drive an underpowered car up a hill; start state #28). Hero: **CartPole, PPO · Planted flaw 2** (reported issue: "Drifts in one zone of the track").
+Robots in this demo: **CartPole** (PPO and DQN; balance a pole on a moving cart; start state #152) and **MountainCar** (DQN; drive an underpowered car up a hill; start state #13). Hero: **CartPole, PPO · Planted flaw 2** (reported issue: "Drifts in one zone of the track").
 
 ---
 
@@ -32,7 +32,7 @@ Open http://localhost:8000, full screen. Optional pre-flight check (all green):
 cd ~/Unbox && source .venv/bin/activate && python -m scripts.smoke
 ```
 
-`.env` settings used: `STORE=json`, `SNAP=1`, `LIVE_MAX_TURNS=4`, `LIVE_TIMEOUT_S=75`, `DEMO_SEED_BB_01=152`, `DEMO_SEED_BB_03=28`. Keep `STORE=json`: Atlas works but slowed a live run from 13 s to 56 s.
+`.env` settings used: `STORE=json`, `SNAP=1`, `LIVE_MAX_TURNS=4`, `LIVE_TIMEOUT_S=75`, `DEMO_SEED_BB_01=152`, `DEMO_SEED_BB_03=13`. Keep `STORE=json`: Atlas works but slowed a live run from 13 s to 56 s.
 
 ---
 
@@ -80,7 +80,7 @@ An abstract and five numbered tables computed from `results/*.json`: headline me
 
 ## Known limits (be ready for the question)
 
-- **One-to-one copies:** on CartPole flaws 1 and 2 the copy fails at exactly the same step as the robot (0 differing frames). On MountainCar flaw 1 the copy matches 92% of single decisions but, over a whole episode, it still reaches the goal while the robot gets stuck. Unbox flags this with its closed-loop check ("the copy's episode does not end like the robot's") and the red outline shows where they differ. The fix still works there: success 1/5 → 5/5.
+- **One-to-one copies:** CartPole flaws 1 and 2: the copy fails at exactly the robot's step (0 differing frames). MountainCar flaw 1 from start state #13: the flawed robot reaches the goal at step 130 instead of 86 (it freezes in the left corner and loses a swing), the copy at 129; after Apply fix the real robot needs 88 steps. Second demo scenario: MountainCar, DQN · Planted flaw 1 (live runs usually switch to the earlier run, which is one-to-one).
 - **Fix results** (5 test starts, live black box): CartPole flaw 1 reward 345 → 500, success 3/5 → 5/5; CartPole flaw 2 reward 178 → 500, 1/5 → 5/5; MountainCar flaw 1 reward −146 → −99, 1/5 → 5/5.
 
 ## If something fails on stage

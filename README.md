@@ -147,7 +147,7 @@ curl -s -X POST localhost:8000/api/run -H 'content-type: application/json' \
 
 - **Isolation is enforced.** `tests/test_isolation.py` fails the build if the agent imports a model library or calls an admin endpoint.
 - **Live runs are capped at 75 s.** Muse takes 15 to 25 s per turn, so some live runs cannot converge in time; the app then shows a stored run of the same configuration and says so in a banner.
-- **One-to-one copies.** On both CartPole failures the copy fails at exactly the robot's step. On MountainCar the copy matches 92% of single decisions but can still reach the goal where the robot gets stuck; the one-to-one check flags this and the fix still works there.
+- **One-to-one copies.** On both CartPole failures the copy fails at exactly the robot's step. On MountainCar (start state #13) the flawed robot needs 130 steps to reach the goal and its copy 129; with the fix applied the robot needs 88. On some other MountainCar start states the copy (92% single-decision match) still diverges, and the one-to-one check flags it.
 - Every brain call is logged to `runs/<run_id>/brain_calls.jsonl` (provider, model, latency, tokens, status).
 
 ## Built during the hackathon

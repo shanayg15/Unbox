@@ -493,9 +493,10 @@ function endLabel(end) {
   const fam = envFamily(policyOf(S.config.bb).env_id);
   if (!end) return "Episode over";
   const timeUp = end.truncated && !end.terminated;
-  if (fam === "CartPole") return timeUp ? "Balanced for the full episode" : "Failed: the pole fell";
-  if (fam === "MountainCar" || fam === "Acrobot") return timeUp ? "Did not reach the goal in time" : "Reached the goal";
-  if (fam === "LunarLander") return timeUp ? "Time limit reached" : (end.last_reward || 0) > 0 ? "Landed" : "Crashed";
+  const at = end.steps ? ` (step ${end.steps})` : "";
+  if (fam === "CartPole") return timeUp ? "Balanced for the full episode" : `Failed: the pole fell${at}`;
+  if (fam === "MountainCar" || fam === "Acrobot") return timeUp ? "Did not reach the goal in time" : `Reached the goal${at}`;
+  if (fam === "LunarLander") return timeUp ? "Time limit reached" : (end.last_reward || 0) > 0 ? `Landed${at}` : `Crashed${at}`;
   return "Episode over";
 }
 
