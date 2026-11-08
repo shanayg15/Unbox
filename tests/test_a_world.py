@@ -297,7 +297,8 @@ def report():
 # No threshold puts these in the band; each still fires and costs reward. Everything else must hit it.
 #   t-cp-1/bb-01: PPO already pushes left in most of that region, so the override rarely changes it
 #   t-cp-1/bb-02: same threshold, but the DQN sways far more, so it fires more
-KNOWN_OFF_TARGET = {("t-cp-1", "bb-01"), ("t-cp-1", "bb-02")}
+KNOWN_OFF_TARGET = {("t-cp-1", "bb-01"), ("t-cp-1", "bb-02"),
+                    ("t-mc-1", "bb-03")}   # strengthened on purpose: the robot must visibly get stuck
 
 
 def test_twists_fire_on_5_to_30_percent_of_steps(report):
