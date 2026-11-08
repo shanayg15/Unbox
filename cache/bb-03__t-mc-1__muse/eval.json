@@ -1,11 +1,11 @@
 {
-  "open_loop_agreement": 0.9185004074979625,
-  "n_holdout_obs": 1227,
-  "clone_mean_reward": -127.85,
-  "bb_mean_reward": -141.25,
+  "open_loop_agreement": 0.925625,
+  "n_holdout_obs": 1600,
+  "clone_mean_reward": -200.0,
+  "bb_mean_reward": -200.0,
   "n_episodes": 20,
-  "n_failures": 4,
-  "failure_rate_bound_95": null,
-  "us_per_action_clone": 0.200208043679595,
-  "us_per_action_bb": 2.5319068299722858
+  "n_failures": 0,
+  "failure_rate_bound_95": 0.15,
+  "us_per_action_clone": 0.15995901776477695,
+  "us_per_action_bb": 2.7050782591686584
 }

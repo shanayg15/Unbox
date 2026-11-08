@@ -28,9 +28,9 @@ On the CartPole and MountainCar policies used in the demo (16 batch runs, each w
 
 | Measure | Result |
 |---|---|
-| Planted failures found | **5 of 5** with SubQ Snap (4 of 5 without) |
-| Behavioural fidelity (median agreement on unseen states) | **93.2%** (vs 87.0% for a controller the LLM writes without querying the network) |
-| Queries needed to find the failure | **574 vs 1,164** without SubQ (−51%; up to 8.7× fewer on one flaw) |
+| Planted failures found | **5 of 5** (with and without SubQ Snap) |
+| Behavioural fidelity (median agreement on unseen states) | **93.6%** (vs 87.0% for a controller the LLM writes without querying the network) |
+| Queries needed to find the failure | **701 vs 1,291** without SubQ (−46%; up to 8.7× fewer on one flaw) |
 | Specificity (copy vs its own network / a sibling network) | **94.5% vs 59.4%** agreement |
 | Speed of the readable copy vs the network | **12× faster** (median) |
 
@@ -40,9 +40,9 @@ After **Apply fix**, measured live on 5 test starts:
 |---|---|---|---|
 | CartPole: "over-reacts when moving fast" | removed `if cart_v > P['t_hi']: return 0` | 345 → **500** | 3/5 → **5/5** |
 | CartPole: "drifts in one zone of the track" | removed `if x < P['x_thr']: return 1` | 178 → **500** | 1/5 → **5/5** |
-| MountainCar: "freezes in one corner" | removed `if x <= P['p0']: return 1` | −146 → **−99** | 1/5 → **5/5** |
+| MountainCar: "freezes in one corner" | removed `if x <= P['p_left']: return 1` | −200 → **−132** | reached goal 0/5 → **4/5** |
 
-Outside the failure region the guarded network chooses the same action as the original on 99.9 to 100% of held-out states.
+Outside the failure region the guarded network chooses the same action as the original on 100% of held-out states.
 
 ---
 
@@ -147,7 +147,7 @@ curl -s -X POST localhost:8000/api/run -H 'content-type: application/json' \
 
 - **Isolation is enforced.** `tests/test_isolation.py` fails the build if the agent imports a model library or calls an admin endpoint.
 - **Live runs are capped at 75 s.** Muse takes 15 to 25 s per turn, so some live runs cannot converge in time; the app then shows a stored run of the same configuration and says so in a banner.
-- **One-to-one copies.** On both CartPole failures the copy fails at exactly the robot's step. On MountainCar (start state #13) the flawed robot needs 130 steps to reach the goal and its copy 129; with the fix applied the robot needs 88. On some other MountainCar start states the copy (92% single-decision match) still diverges, and the one-to-one check flags it.
+- **One-to-one copies.** On both CartPole failures the copy fails at exactly the robot's step. On MountainCar (start state #13) the flawed robot never reaches the goal and neither does its copy; with the fix applied the robot reaches it at step 102.
 - Every brain call is logged to `runs/<run_id>/brain_calls.jsonl` (provider, model, latency, tokens, status).
 
 ## Built during the hackathon

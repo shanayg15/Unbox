@@ -52,7 +52,7 @@ def _make() -> dict[str, Twist]:
     # CartPole: cart_x=0 cart_v=1 | push_left=0 push_right=1
     t_cp_1, t_cp_2 = 0.03, -0.08
     # MountainCar: position=0 | noop=1
-    t_mc_1 = -0.8
+    t_mc_1 = -0.5    # strong enough that the robot visibly fails (stuck in the left corner)
     twists = [
         Twist("t-ll-1", LUNARLANDER, "Hidden flaw #1", "Skips its safety action on the right side",
               # Every action goes to noop past the line, whatever the policy chose: the engines cut out

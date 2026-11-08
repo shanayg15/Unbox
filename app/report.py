@@ -549,6 +549,8 @@ def _compute_cost(bridge, prog: dict, fix: dict) -> None:
             threshold = gym.spec(env_id).reward_threshold
         except Exception:  # noqa: BLE001
             threshold = None
+        if str(env_id).startswith("MountainCar"):
+            threshold = -199.5        # success = reached the goal before the 200-step limit
         robot, guarded = [], []
         for seed in EVAL_SEEDS:
             robot.append(float(bb.episode(seed).total_reward))

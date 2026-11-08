@@ -8,6 +8,7 @@ const PLAY_FPS_MAX = 10;                 // clips play at most this fast
 const HOLD_MS = 1800;                    // hold the last frame (with its label) before looping
 const HIDE_FROM_MENU = new Set([]);      // flaws not reliably found go here (they stay in Results)
 const SHOWN_ENVS = new Set(["CartPole", "MountainCar"]);   // robots this demo covers
+const HIDDEN_POLICIES = new Set(["bb-02"]);                  // CartPole DQN: copies are not reliable enough to demo
 
 const ROBOTS = {
   CartPole: "Balances a pole on a moving cart",
@@ -19,6 +20,7 @@ const ROBOTS = {
 const S = {};
 window.__unbox = S;
 let POLICIES = [];
+let RESULT_POLICIES = [];
 
 function resetRun() {
   Object.assign(S, {
@@ -39,7 +41,7 @@ const fmtK = (n) => (n >= 1000 ? `${Math.round(n / 1000)}K` : `${n}`);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const words = (s, n = 12) => { const w = String(s || "").split(/\s+/).filter(Boolean); return w.length > n ? w.slice(0, n).join(" ") + "…" : w.join(" "); };
 const envFamily = (envId) => String(envId || "").split("-")[0];
-function policyOf(bb) { return POLICIES.find((p) => p.bb === bb) || { bb, label: bb, env_id: "" }; }
+function policyOf(bb) { return RESULT_POLICIES.find((p) => p.bb === bb) || { bb, label: bb, env_id: "" }; }
 function robotName(p) { const [env, algo] = String(p.label || p.bb).split("-"); return algo ? `${env}, ${algo}` : env; }
 const flawNum = (tid) => (tid ? (String(tid).match(/(\d+)$/) || [, "?"])[1] : null);
 const matchNow = () => (S.best ? S.best.agreement : null);
@@ -642,7 +644,7 @@ async function loadResults() {
   try { j = await (await fetch("/api/results")).json(); } catch (e) { box.innerHTML = `<div class="muted">Could not load results: ${esc(e.message)}</div>`; return; }
   if (!j.available) { box.innerHTML = '<div class="muted">No batch results yet (python -m scripts.batch --snap 1,0).</div>'; return; }
   const R = j.results;
-  const shownBB = new Set(POLICIES.map((p) => p.bb));
+  const shownBB = new Set(RESULT_POLICIES.map((p) => p.bb));
   const rows = ((R.summary && R.summary.rows) || []).filter((r) => shownBB.has(r.bb));
   const flawRows = rows.filter((r) => r.twist && r.twist !== "none");
   const on = rows.filter((r) => r.snap === true);
@@ -762,7 +764,8 @@ async function boot() {
   }));
   try {
     const [cfg, pol] = await Promise.all([getJSON("/api/config"), getJSON("/api/policies")]);
-    POLICIES = (pol.policies || []).filter((p) => SHOWN_ENVS.has(envFamily(p.env_id)));
+    RESULT_POLICIES = (pol.policies || []).filter((p) => SHOWN_ENVS.has(envFamily(p.env_id)));
+    POLICIES = RESULT_POLICIES.filter((p) => !HIDDEN_POLICIES.has(p.bb));
     $("selPolicy").innerHTML = POLICIES.map((p) => `<option value="${esc(p.bb)}">${esc(robotName(p))}</option>`).join("");
     if (POLICIES.some((p) => p.bb === "bb-01")) $("selPolicy").value = "bb-01";
     if (pol.warning) showBanner(pol.warning);
